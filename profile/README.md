@@ -32,3 +32,4 @@
 * [Махров Иван](https://telegram.me/MakhrovIvan)
 * [Владислав Щукин](https://telegram.me/shchukin_ve)
 * [Лука Марков](https://telegram.me/lulu_fw01)
+* [Мансур Аглиев](https://telegram.me/mansagliev)
