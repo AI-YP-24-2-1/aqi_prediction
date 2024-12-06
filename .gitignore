@@ -1,14 +1,13 @@
 *.csv
 *.sqlite
 *.json
-*.txt
 *.xlsx
 air_quality_by_city/
 csv_data/
 excel_data/
 json_data/
 weather_by_city/
-year_project_env_3_13/
+year_project_venv/
 .DS_Store
 .ipynb_checkpoints/
 __pycache__/
