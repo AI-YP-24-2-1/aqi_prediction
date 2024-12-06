@@ -118,5 +118,5 @@ class BaseModel:
 
 
 base_model = BaseModel()
-base_model.train_model(100000, mode='aqi', model_list=[])
+base_model.train_model(30000000, mode='aqi', model_list=[])
 base_model.model_quality(mode='aqi', model_list=[])
