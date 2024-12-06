@@ -6,6 +6,7 @@ import joblib
 from datetime import datetime
 import time
 from sklearn.metrics import r2_score, mean_squared_error as MSE, root_mean_squared_error as RMSE
+import os
 
 
 class BaseModel:
@@ -116,6 +117,9 @@ class BaseModel:
             rmse = RMSE(test_y[model_name], pred)
             self.log(mode, '\n---------------RESULTS:\nModel: {}\nr2: {}\nMSE: {}\nRMSE: {}\n---------------', model_name, r2, mse, rmse)
 
+
+if not os.getcwd().endswith('.github'):
+    os.chdir('../')
 
 base_model = BaseModel()
 base_model.train_model(30000000, mode='aqi', model_list=[])
