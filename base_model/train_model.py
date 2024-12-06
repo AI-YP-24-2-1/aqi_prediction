@@ -12,14 +12,17 @@ class BaseModel:
     def __init__(self):
         self.models = {
             'pollen': {
-                'regressor': {'alder_pollen': SGDRegressor(),
+                'regressor': {
+                    'alder_pollen': SGDRegressor(),
                     'birch_pollen': SGDRegressor(),
                     'grass_pollen': SGDRegressor(),
                     'mugwort_pollen': SGDRegressor(),
                     'olive_pollen': SGDRegressor(),
                     'ragweed_pollen': SGDRegressor()
                     },
-                'scaler': {'pollen_scaler': StandardScaler()},
+                'scaler': {
+                    'pollen_scaler': StandardScaler()
+                },
                 'path': {
                     'train_x_path': 'csv_data/train_x_pollen.csv',
                     'train_y_path': 'csv_data/train_y_pollen.csv',
@@ -29,8 +32,12 @@ class BaseModel:
                 }
             },
             'aqi': {
-                'regressor': {'european_aqi': SGDRegressor()},
-                'scaler': {'pollen_scaler': StandardScaler()},
+                'regressor': {
+                    'european_aqi': SGDRegressor()
+                },
+                'scaler': {
+                    'pollen_scaler': StandardScaler()
+                },
                 'path': {
                     'train_x_path': 'csv_data/train_x_aqi.csv',
                     'train_y_path': 'csv_data/train_y_aqi.csv',
@@ -38,7 +45,7 @@ class BaseModel:
                     'test_y_path': 'csv_data/test_y_aqi.csv',
                     'pickle_path': ''
                 }
-                }
+            }
         }
     
     def log(self, mode, text, *args):
@@ -48,7 +55,9 @@ class BaseModel:
              log_file.write(text + '\n')
         print(text)
     
-    def train_model(self, chunksize, mode='aqi'):
+    def train_model(self, chunksize, mode='aqi', model_list=[]):
+        
+        models = model_list if model_list else self.models[mode]['regressor'].keys()
         rows = 1
 
         while True:
@@ -64,8 +73,8 @@ class BaseModel:
 
             train_x = pd.DataFrame(self.models[mode]['scaler']['pollen_scaler'].fit_transform(train_x), columns=train_x.columns)
 
-            for model_name in self.models[mode]['regressor'].keys():
-                self.log(mode, 'training  model')
+            for model_name in models:
+                self.log(mode, 'training  {} model', model_name)
                 model = self.models[mode]['regressor'][model_name]
                 train_y_model = np.array(train_y[model_name].fillna(0)).ravel()
                 model.partial_fit(train_x, train_y_model)
@@ -76,11 +85,13 @@ class BaseModel:
             if train_y.shape[0] != chunksize:
                 break
         
-        for model_name in self.models[mode]['regressor'].keys():
+        for model_name in models:
             joblib.dump(self.models[mode]['regressor'][model_name], f'pickle_files/{model_name}_model.pickle')
 
 
-    def model_quality(self, mode) -> None:
+    def model_quality(self, mode, model_list=[]) -> None:
+        models = model_list if model_list else self.models[mode]['regressor'].keys()
+
         self.log(mode, 'Reading train data')
         test_x = pd.read_csv(self.models[mode]['path']['test_x_path']).select_dtypes(['int', 'float'])
         test_y = pd.read_csv(self.models[mode]['path']['test_y_path']).select_dtypes(['int', 'float'])
@@ -95,7 +106,7 @@ class BaseModel:
 
         self.log(mode, 'np.nan filled')
 
-        for model_name in self.models[mode]['regressor'].keys():
+        for model_name in models:
             model = joblib.load(f'pickle_files/{model_name}_model.pickle')
             pred = model.predict(test_x)
             self.log(mode, '{} predicted', model_name)
@@ -107,8 +118,5 @@ class BaseModel:
 
 
 base_model = BaseModel()
-base_model.train_model(30000000, mode='aqi')
-base_model.model_quality(mode='aqi')
-
-base_model.train_model(30000000, mode='pollen')
-base_model.model_quality(mode='pollen')
+base_model.train_model(100000, mode='aqi', model_list=[])
+base_model.model_quality(mode='aqi', model_list=[])
