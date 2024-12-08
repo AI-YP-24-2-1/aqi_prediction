@@ -7,6 +7,7 @@ from datetime import datetime
 import time
 from sklearn.metrics import r2_score, mean_squared_error as MSE, root_mean_squared_error as RMSE
 import os
+import gc
 
 
 class BaseModel:
@@ -37,7 +38,7 @@ class BaseModel:
                     'european_aqi': SGDRegressor()
                 },
                 'scaler': {
-                    'pollen_scaler': StandardScaler()
+                    'aqi_scaler': StandardScaler()
                 },
                 'path': {
                     'train_x_path': 'csv_data/train_x_aqi.csv',
@@ -72,16 +73,22 @@ class BaseModel:
                 train_x[column] = train_x[column].fillna(median_value)
             self.log(mode, 'np.nan filled')
 
-            train_x = pd.DataFrame(self.models[mode]['scaler']['pollen_scaler'].fit_transform(train_x), columns=train_x.columns)
+            train_x = pd.DataFrame(self.models[mode]['scaler'][f'{mode}_scaler'].fit_transform(train_x), columns=train_x.columns)
 
             for model_name in models:
-                self.log(mode, 'training  {} model', model_name)
+                self.log(mode, 'training {} model', model_name)
                 model = self.models[mode]['regressor'][model_name]
                 train_y_model = np.array(train_y[model_name].fillna(0)).ravel()
                 model.partial_fit(train_x, train_y_model)
 
             rows += train_y.shape[0]
             self.log(mode, '{} processed', rows-1)
+
+            del train_x
+            del train_y
+            
+            gc.collect()
+            time.sleep(30)
 
             if train_y.shape[0] != chunksize:
                 break
@@ -93,7 +100,7 @@ class BaseModel:
     def model_quality(self, mode, model_list=[]) -> None:
         models = model_list if model_list else self.models[mode]['regressor'].keys()
 
-        self.log(mode, 'Reading train data')
+        self.log(mode, 'Reading test data')
         test_x = pd.read_csv(self.models[mode]['path']['test_x_path']).select_dtypes(['int', 'float'])
         test_y = pd.read_csv(self.models[mode]['path']['test_y_path']).select_dtypes(['int', 'float'])
         self.log(mode, 'Data read')
@@ -104,8 +111,11 @@ class BaseModel:
 
         for column in test_y.columns:
             test_y[column] = test_y[column].fillna(0) if mode=='pollen' else test_y[column].fillna(test_y[column].median())
+        
 
         self.log(mode, 'np.nan filled')
+
+        test_x = pd.DataFrame(self.models[mode]['scaler'][f'{mode}_scaler'].transform(test_x), columns=test_x.columns)
 
         for model_name in models:
             model = joblib.load(f'pickle_files/{model_name}_model.pickle')
@@ -115,7 +125,7 @@ class BaseModel:
             r2 = r2_score(test_y[model_name], pred)
             mse = MSE(test_y[model_name], pred)
             rmse = RMSE(test_y[model_name], pred)
-            self.log(mode, '\n---------------RESULTS:\nModel: {}\nr2: {}\nMSE: {}\nRMSE: {}\n---------------', model_name, r2, mse, rmse)
+            print(f'\n---------------RESULTS:---------------\nModel: {model_name}\nr2: {r2}\nMSE: {mse}\nRMSE: {rmse}')
 
 
 if not os.getcwd().endswith('.github'):
