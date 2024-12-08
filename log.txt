@@ -1,0 +1,16 @@
+08.12.2024 12:38:12: (aqi) Reading train data
+08.12.2024 12:52:53: (aqi) Data read
+08.12.2024 12:55:58: (aqi) np.nan filled
+08.12.2024 13:09:22: (aqi) Reading test data
+08.12.2024 13:10:48: (aqi) Reading test data
+08.12.2024 13:11:11: (aqi) Reading test data
+08.12.2024 13:28:10: (aqi) Data read
+08.12.2024 13:31:29: (aqi) np.nan filled
+08.12.2024 13:55:35: (aqi) european_aqi predicted
+08.12.2024 13:55:38: (aqi) 
+---------------RESULTS:---------------
+Model: european_aqi
+r2: 0.5425802137993698
+MSE: 40.67610014534217
+RMSE: 6.377781757424925
+---------------
