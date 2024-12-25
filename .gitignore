@@ -12,3 +12,4 @@ year_project_venv/
 .ipynb_checkpoints/
 __pycache__/
 air_weather_data.csv
+myenv/
