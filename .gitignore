@@ -14,3 +14,6 @@ files
 aqi_pollen_parser/system_docs
 fastapi_test_dataset/
 launch_at_night.py
+
+air_weather_data.csv
+myenv/
