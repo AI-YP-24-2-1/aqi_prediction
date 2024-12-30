@@ -8,7 +8,7 @@ import os
 
 st.set_page_config(layout="wide")
 
-if not os.getcwd().endswith('.github'):
+if not os.getcwd().endswith('aqi_prediction'):
     os.chdir('../')
 
 def plots(df, column, region):
