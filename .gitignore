@@ -1,4 +1,3 @@
-*.csv
 *.sqlite
 *.json
 *.xlsx
@@ -11,4 +10,7 @@ year_project_venv/
 .DS_Store
 .ipynb_checkpoints/
 __pycache__/
-
+files
+aqi_pollen_parser/system_docs
+fastapi_test_dataset/
+launch_at_night.py
