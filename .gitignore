@@ -16,4 +16,5 @@ fastapi_test_dataset/
 launch_at_night.py
 
 air_weather_data.csv
+air_weather_data_transformed_without_pollen.csv
 myenv/
