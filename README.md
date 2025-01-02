@@ -61,6 +61,8 @@ Streamlit сервис будет доступен по url: http://localhost:85
 * Построение прогноза - мы можем выбрать модель из списка загруженных моделей и сделать прогноз. После построения прогноза можно будет загрузить csv файл с прогнозными значениями AQI
 ![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/train_model.png?raw=true)
 
+![alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/Streamlit_video.gif?raw=true)
+
 ## Методы Fastapi
 Взаимодействие с моделями происходит с помощью Fastapi<br>
 Fastapi доступен по url: http://0.0.0.0:8000/
