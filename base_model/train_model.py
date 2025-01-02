@@ -7,34 +7,36 @@ import time
 from sklearn.metrics import r2_score, mean_squared_error as MSE, root_mean_squared_error as RMSE
 import os
 import gc
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 import logging
 
 
 class BaseModel:
-    def __init__(self, model_name: str, chunksize: int):
-        self.model_name = model_name
+    def __init__(self, chunksize: int):
         self.files_path = f'{'/'.join(os.getcwd().split('/')[:3])}/year_project'
         self.chunksize = chunksize
+
+        self.test_x = pd.DataFrame()
+        self.test_y = pd.DataFrame()
 
         self.setup_logging()
         self.setup_folders()
 
+        self.scaler = StandardScaler()
+
         self.models = {
-                'regressor': {
-                    'european_aqi': SGDRegressor()
-                },
-                'scaler': {
-                    'aqi_scaler': StandardScaler()
-                },
-                'path': {
-                    'dataset': f'{self.files_path}/csv_data/air_weather_data_transformed_without_pollen.csv',
-                    'train_x': f'{self.files_path}/{self.model_name}/train_x_aqi.csv',
-                    'train_y': f'{self.files_path}/{self.model_name}/train_y_aqi.csv',
-                    'test_x': f'{self.files_path}/{self.model_name}/test_x_aqi.csv',
-                    'test_y': f'{self.files_path}/{self.model_name}/test_y_aqi.csv',
-                    'pickle': f'app/models/{self.model_name}.pickle'
-                }
+            'european_aqi': {
+                'model': SGDRegressor(alpha=0, l1_ratio=0.001),
+                'path': 'app/models/european_model.pickle'
+            }
+        }
+
+        self.path = {
+            'dataset': f'{self.files_path}/csv_data/air_weather_data_transformed_without_pollen.csv',
+            'train_x': f'{self.files_path}/aqi_model/train_x_aqi.csv',
+            'train_y': f'{self.files_path}/aqi_model/train_y_aqi.csv',
+            'test_x': f'{self.files_path}/aqi_model/test_x_aqi.csv',
+            'test_y': f'{self.files_path}/aqi_model/test_y_aqi.csv'
         }
 
     
@@ -43,11 +45,11 @@ class BaseModel:
     
 
     def setup_folders(self) -> None:
-        if not os.getcwd().endswith('.github'):
+        if not os.getcwd().endswith('aqi_prediction'):
             os.chdir('../')
         
-        if not os.path.exists(f'{self.files_path}/{self.model_name}'):
-            os.makedirs(f'{self.files_path}/{self.model_name}')
+        if not os.path.exists(f'{self.files_path}/aqi_model'):
+            os.makedirs(f'{self.files_path}/aqi_model')
 
 
     def log(self, level: str, message: str, *args) -> None:
@@ -62,7 +64,7 @@ class BaseModel:
     def split_data(self) -> None:
         i = 0
         self.log('info', 'Reading dataset')
-        with pd.read_csv(self.models['path']['dataset'], chunksize=self.chunksize) as file:
+        with pd.read_csv(self.path['dataset'], chunksize=self.chunksize) as file:
             self.log('info', 'Dataset read')
 
             for df in file:
@@ -77,19 +79,19 @@ class BaseModel:
                 self.log('info', 'Dataset split')
 
                 self.log('info', 'Saving train_x dataset')
-                self.save_df(train_x_aqi, self.models['path']['train_x'])
+                self.save_df(train_x_aqi, self.path['train_x'])
                 self.log('info', 'train_x dataset saved')
 
                 self.log('info', 'Saving test_x dataset')
-                self.save_df(test_x_aqi, self.models['path']['test_x'])
+                self.save_df(test_x_aqi, self.path['test_x'])
                 self.log('info', 'test_x dataset saved')
 
                 self.log('info', 'Saving train_y dataset')
-                self.save_df(train_y_aqi, self.models['path']['train_y'])
+                self.save_df(train_y_aqi, self.path['train_y'])
                 self.log('info', 'train_y dataset saved')
 
                 self.log('info', 'Saving test_y dataset')
-                self.save_df(test_y_aqi, self.models['path']['test_y'])
+                self.save_df(test_y_aqi, self.path['test_y'])
                 self.log('info', 'test_y dataset saved')
 
                 i += len(df)
@@ -103,30 +105,68 @@ class BaseModel:
             df.to_csv(filename, mode='a', header=False, index=False)
     
 
+    def grid_search(self, models_list, param_grid, cv) -> None:
+        self.log('info', 'Reading train data')
+        train_x = pd.read_csv(self.path['train_x'], nrows=self.chunksize, header=0).select_dtypes(['float', 'int'])
+        train_y = pd.read_csv(self.path['train_y'], nrows=self.chunksize)
+        self.log('info', 'Data read')
+
+        self.log('info', 'Filling np.nan')
+        for column in train_x.columns:
+            #median_value = train_x[column].median() if not train_x[column].isna().all() else 0
+            #train_x[column] = train_x[column].fillna(median_value)
+            train_x[column] = train_x.groupby('city_id')[column].transform(lambda x: x.fillna(x.mean()) if x.notna().any() else x.fillna(0))
+        self.log('info', 'np.nan filled')
+
+        self.log('info', 'Scaling dataset')
+        train_x = pd.DataFrame(self.scaler.fit_transform(train_x), columns=train_x.columns)
+        self.log('info', 'Dataset scaled')
+
+        for model_name in models_list:
+            self.log('info', 'Searching hyperparameters with gridsearch for {} model', model_name)
+            model = self.models[model_name]['model']
+            grid_search = GridSearchCV(estimator=model, param_grid=param_grid, scoring='neg_root_mean_squared_error', cv=cv, n_jobs=-1, verbose=2)
+            train_y_model = np.array(train_y['european_aqi'].fillna(0)).ravel()
+            grid_search.fit(train_x, train_y_model)
+            self.log('info', 'Hyperparameters found for {} model', model_name)
+            self.log('info', 'Best params: {}', grid_search.best_params_)
+
+        self.log('info', '{} rows processed', self.chunksize)
+
+        self.models['grid_search'] = {
+            'model': grid_search.best_estimator_,
+            'path': 'app/models/grid_search.pickle'
+        }
+        joblib.dump(self.models['grid_search']['model'], self.models['grid_search']['path'])
+        self.model_quality('grid_search')
+
+        
     def train_model(self) -> None:
         rows = 1
 
         while True:
             self.log('info', 'Reading train data')
-            train_x = pd.read_csv(self.models['path']['train_x'], skiprows=range(1, rows), nrows=self.chunksize, header=0).select_dtypes(['float', 'int'])
-            train_y = pd.read_csv(self.models['path']['train_y'], skiprows=range(1, rows), nrows=self.chunksize)
+            train_x = pd.read_csv(self.path['train_x'], skiprows=range(1, rows), nrows=self.chunksize, header=0).select_dtypes(['float', 'int'])
+            train_y = pd.read_csv(self.path['train_y'], skiprows=range(1, rows), nrows=self.chunksize)
             self.log('info', 'Data read')
 
             self.log('info', 'Filling np.nan')
             for column in train_x.columns:
-                median_value = train_x[column].median() if not train_x[column].isna().all() else 0
-                train_x[column] = train_x[column].fillna(median_value)
+                #median_value = train_x[column].median() if not train_x[column].isna().all() else 0
+                #train_x[column] = train_x[column].fillna(median_value)
+                train_x[column] = train_x.groupby('city_id')[column].transform(lambda x: x.fillna(x.mean()) if x.notna().any() else x.fillna(0))
             self.log('info', 'np.nan filled')
 
             self.log('info', 'Scaling dataset')
-            train_x = pd.DataFrame(self.models['scaler']['aqi_scaler'].fit_transform(train_x), columns=train_x.columns)
+            train_x = pd.DataFrame(self.scaler.fit_transform(train_x), columns=train_x.columns)
             self.log('info', 'Dataset scaled')
 
-            self.log('info', 'training model')
-            model = self.models['regressor']['european_aqi']
-            train_y_model = np.array(train_y['european_aqi'].fillna(0)).ravel()
-            model.partial_fit(train_x, train_y_model)
-            self.log('info', 'Model trained')
+            for model_name in list(self.models.keys()):
+                self.log('info', 'training {} model', model_name)
+                model = self.models[model_name]['model']
+                train_y_model = np.array(train_y['european_aqi'].fillna(train_y['european_aqi'].median())).ravel()
+                model.partial_fit(train_x, train_y_model)
+                self.log('info', 'Model {} trained', model_name)
 
             rows += train_y.shape[0]
             self.log('info', '{} rows processed', rows-1)
@@ -139,50 +179,61 @@ class BaseModel:
             
             gc.collect()
             time.sleep(5)
-
         
-        self.log('info', 'Saving model')
-        joblib.dump(self.models['regressor']['european_aqi'], self.models['path']['pickle'])
-        self.log('info', 'Model saved')
+        for model_name in list(self.models.keys()):
+            self.log('info', 'Saving {} model', model_name)
+            joblib.dump(self.models[model_name]['model'], self.models[model_name]['path'])
+            self.log('info', 'Model {} saved', model_name)
+        
+        for model_name in list(self.models.keys()):
+            self.model_quality(model_name)
 
 
-    def model_quality(self) -> None:
-        self.log('info', 'Reading test data')
-        test_x = pd.read_csv(self.models['path']['test_x']).select_dtypes(['int', 'float'])
-        test_y = pd.read_csv(self.models['path']['test_y']).select_dtypes(['int', 'float'])
-        self.log('info', 'Data read')
+    def model_quality(self, model_name: str) -> None:
+        if self.test_x.empty and self.test_y.empty:
+            self.log('info', 'Reading test data')
+            self.test_x = pd.read_csv(self.path['test_x']).select_dtypes(['int', 'float'])
+            self.test_y = pd.read_csv(self.path['test_y']).select_dtypes(['int', 'float'])
+            self.log('info', 'Data read')
 
-        self.log('info', 'Filling np.nan')
-        for column in test_x.columns:
-            median_value = test_x[column].median() if not test_x[column].isna().all() else 0
-            test_x[column] = test_x[column].fillna(median_value)
+            self.log('info', 'Filling np.nan')
+            for column in self.test_x.columns:
+                #median_value = test_x[column].median() if not test_x[column].isna().all() else 0
+                #test_x[column] = test_x[column].fillna(median_value)
+                self.test_x[column] = self.test_x.groupby('city_id')[column].transform(lambda x: x.fillna(x.mean()) if x.notna().any() else x.fillna(0))
 
-        for column in test_y.columns:
-            test_y[column] = test_y[column].fillna(test_y[column].median())
+            for column in self.test_y.columns:
+                self.test_y[column] = self.test_y[column].fillna(self.test_y[column].median())
 
-        self.log('info', 'np.nan filled')
+            self.log('info', 'np.nan filled')
 
-        self.log('info', 'Scaling dataset')
-        test_x = pd.DataFrame(self.models['scaler']['aqi_scaler'].transform(test_x), columns=test_x.columns)
-        self.log('info', 'Dataset scaled')
+            self.log('info', 'Scaling dataset')
+            self.test_x = pd.DataFrame(self.scaler.transform(self.test_x), columns=self.test_x.columns)
+            self.log('info', 'Dataset scaled')
 
-        self.log('info', 'Loading model')
-        model = joblib.load(self.models['path']['pickle'])
-        self.log('info', 'Model loaded')
+        self.log('info', 'Loading {} model', model_name)
+        model = joblib.load(self.models[model_name]['path'])
+        self.log('info', 'Model {} loaded', model_name)
 
         self.log('info', 'Predicting AQI')
-        pred = model.predict(test_x)
+        pred = model.predict(self.test_x)
         self.log('info', 'AQI predicted')
 
         self.log('info', 'Calculating metrics')
-        r2 = r2_score(test_y['european_aqi'], pred)
-        mse = MSE(test_y['european_aqi'], pred)
-        rmse = RMSE(test_y['european_aqi'], pred)
+        r2 = r2_score(self.test_y['european_aqi'], pred)
+        mse = MSE(self.test_y['european_aqi'], pred)
+        rmse = RMSE(self.test_y['european_aqi'], pred)
+        coef = [round(coef, 4) for coef in model.coef_]
         self.log('info', 'Metrics calculated')
-        self.log('info', '\n---------------RESULTS:---------------\nModel: AQI\nr2: {}\nMSE: {}\nRMSE: {}', r2, mse, rmse)
+        self.log('info', '\n---------------RESULTS:---------------\nModel: {}\nr2: {}\nMSE: {}\nRMSE: {}\ncoef: {}\n', model_name, r2, mse, rmse, dict(zip(self.test_x.columns, coef)))
 
 
-#base_model = BaseModel(model_name='aqi_model', chunksize=20000000)
+base_model = BaseModel(chunksize=20000000)
+#param_grid = {
+#            'alpha': [0, 0.2], 
+#            'l1_ratio': [0.0001, 0.001, 0.01],
+#            'warm_start': [True, False]
+#        }
+#base_model.grid_search(['european_aqi'], param_grid, cv=3)
 #base_model.split_data()
-#base_model.train_model()
-#base_model.model_quality()
+base_model.train_model()
