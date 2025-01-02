@@ -1,3 +1,8 @@
+import time
+import os
+import gc
+import logging
+import joblib
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import SGDRegressor
@@ -6,11 +11,6 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_squared_error as MSE
 from sklearn.metrics import root_mean_squared_error as RMSE
-import joblib
-import time
-import os
-import gc
-import logging
 
 
 class BaseModel:
@@ -42,17 +42,27 @@ class BaseModel:
         }
 
     def setup_logging(self) -> None:
+        '''
+        logging settings
+        '''
         logging.basicConfig(level=logging.INFO,
                             format='%(asctime)s - %(levelname)s - %(message)s'
                             )
 
     def setup_folders(self) -> None:
+        '''
+        folder settings
+        '''
         if not os.getcwd().endswith('aqi_prediction'):
             os.chdir('../')
         if not os.path.exists(f'{self.file_path}/aqi_model'):
             os.makedirs(f'{self.file_path}/aqi_model')
 
     def log(self, level: str, message: str, *args) -> None:
+        '''
+        Logging messages
+        '''
+
         if level == 'info':
             logging.info(message.format(*args))
         elif level == 'error':
@@ -61,6 +71,10 @@ class BaseModel:
             logging.warning(message.format(*args))
 
     def split_data(self) -> None:
+        '''
+        Splitting dataset at train and test
+        '''
+
         i = 0
         self.log('info', 'Reading dataset')
         with pd.read_csv(self.path['dataset'],
@@ -99,12 +113,20 @@ class BaseModel:
                 self.log('info', '{} rows processed', i)
 
     def save_df(self, df: pd.DataFrame, filename: str) -> None:
+        '''
+        Saving dataset
+        '''
+
         if not os.path.isfile(filename):
             df.to_csv(filename, mode='w', header=True, index=False)
         else:
             df.to_csv(filename, mode='a', header=False, index=False)
 
     def grid_search(self, models_list, param_grid, cv) -> None:
+        '''
+        Using gridsearch to find best params
+        '''
+
         self.log('info', 'Reading train data')
         train_x = pd.read_csv(self.path['train_x'],
                               nrows=self.chunksize, header=0).select_dtypes(
@@ -153,6 +175,10 @@ class BaseModel:
         self.model_quality('grid_search')
 
     def train_model(self) -> None:
+        '''
+        Training model
+        '''
+
         rows = 1
 
         while True:
@@ -161,6 +187,7 @@ class BaseModel:
                                   skiprows=range(1, rows),
                                   nrows=self.chunksize,
                                   header=0).select_dtypes(['float', 'int'])
+
             train_y = pd.read_csv(self.path['train_y'],
                                   skiprows=range(1, rows), nrows=self.chunksize
                                   )
@@ -211,6 +238,10 @@ class BaseModel:
             self.model_quality(model_name)
 
     def model_quality(self, model_name: str) -> None:
+        '''
+        Measuring model quality
+        '''
+
         if self.test_x.empty and self.test_y.empty:
             self.log('info', 'Reading test data')
             self.test_x = pd.read_csv(self.path['test_x']).select_dtypes(
