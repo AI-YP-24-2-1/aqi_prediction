@@ -50,5 +50,6 @@ https://www.fedstat.ru/indicator/38497
 
 По координатам были получены архивные данные по погоде и пыльце с помощью https://open-meteo.com и сохранены в .csv<br>
 Файлы: open_metro_air_quality_parser.py и open_meteo_weather_parser.py<br>
+
 csv файлы были объединены в один файл<br>
 Файл: merge_csv.py
