@@ -12,3 +12,4 @@ year_project_venv/
 __pycache__/
 files
 aqi_pollen_parser/system_docs
+system_docs/
