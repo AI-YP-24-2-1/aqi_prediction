@@ -1,19 +1,12 @@
-*.sqlite
-*.json
-*.xlsx
-air_quality_by_city/
-csv_data/
 excel_data/
 json_data/
-weather_by_city/
 year_project_venv/
-.DS_Store
+system_docs/
 .ipynb_checkpoints/
 __pycache__/
+*.json
+.DS_Store
 files
-aqi_pollen_parser/system_docs
-fastapi_test_dataset/
-launch_at_night.py
 
 air_weather_data.csv
 air_weather_data_transformed_without_pollen.csv
