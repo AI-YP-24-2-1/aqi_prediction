@@ -15,7 +15,6 @@ class AirQualityParser:
     def __init__(self, startdate, enddate):
         self.startdate = startdate
         self.enddate = enddate
-    
 
     def open_json(self, filename: str) -> list[dict]:
         try:
@@ -24,30 +23,37 @@ class AirQualityParser:
         except Exception as e:
             data = []
             print(f'JSON file: {filename} is empty\n{e}')
-        
+
         return data
-    
 
     def get_city_air_quality(self, lat: float, lon: float):
         # Setup the Open-Meteo API client with cache and retry on error
-        cache_session = requests_cache.CachedSession('.cache', expire_after = -1)
-        retry_session = retry(cache_session, retries = 5, backoff_factor = 0.2)
-        openmeteo = openmeteo_requests.Client(session = retry_session)
+        cache_session = requests_cache.CachedSession('.cache', expire_after=-1)
+        retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
+        openmeteo = openmeteo_requests.Client(session=retry_session)
 
         # Make sure all required weather variables are listed here
-        # The order of variables in hourly or daily is important to assign them correctly below
+        # The order of variables in hourly or daily is important
+        # to assign them correctly below
         url = "https://air-quality-api.open-meteo.com/v1/air-quality"
         params = {
             "latitude": lat,
             "longitude": lon,
             "start_date": self.startdate,
             "end_date": self.enddate,
-            "hourly": ["pm10", "pm2_5", "carbon_monoxide", "carbon_dioxide", "nitrogen_dioxide", "sulphur_dioxide", "ozone", "alder_pollen", "birch_pollen", "grass_pollen", "mugwort_pollen", "olive_pollen", "ragweed_pollen", "european_aqi", "formaldehyde", "pm10_wildfires", "nitrogen_monoxide"],
+            "hourly": ["pm10", "pm2_5", "carbon_monoxide",
+                       "carbon_dioxide", "nitrogen_dioxide",
+                       "sulphur_dioxide", "ozone", "alder_pollen",
+                       "birch_pollen", "grass_pollen", "mugwort_pollen",
+                       "olive_pollen", "ragweed_pollen", "european_aqi",
+                       "formaldehyde", "pm10_wildfires", "nitrogen_monoxide"
+                       ],
             "timezone": "Europe/Moscow"
         }
         response = openmeteo.weather_api(url, params=params)[0]
 
-        # Process hourly data. The order of variables needs to be the same as requested.
+        # Process hourly data. The order of variables needs to be
+        # the same as requested.
         hourly = response.Hourly()
         hourly_pm10 = hourly.Variables(0).ValuesAsNumpy()
         hourly_pm2_5 = hourly.Variables(1).ValuesAsNumpy()
@@ -68,10 +74,12 @@ class AirQualityParser:
         hourly_nitrogen_monoxide = hourly.Variables(16).ValuesAsNumpy()
 
         hourly_data = {"date": pd.date_range(
-            start = pd.to_datetime(hourly.Time(), unit = "s", utc = True) + pd.Timedelta(hours=3),
-            end = pd.to_datetime(hourly.TimeEnd(), unit = "s", utc = True) + pd.Timedelta(hours=3),
-            freq = pd.Timedelta(seconds = hourly.Interval()),
-            inclusive = "left"
+            start=pd.to_datetime(hourly.Time(), unit="s", utc=True) +
+            pd.Timedelta(hours=3),
+            end=pd.to_datetime(hourly.TimeEnd(), unit="s", utc=True) +
+            pd.Timedelta(hours=3),
+            freq=pd.Timedelta(seconds=hourly.Interval()),
+            inclusive="left"
         )}
         hourly_data["pm10"] = hourly_pm10
         hourly_data["pm2_5"] = hourly_pm2_5
@@ -92,12 +100,10 @@ class AirQualityParser:
         hourly_data["nitrogen_monoxide"] = hourly_nitrogen_monoxide
 
         return hourly_data
-    
-    
-    def save_to_csv(self, hourly_data, filename):
-        hourly_dataframe = pd.DataFrame(data = hourly_data)
-        hourly_dataframe.to_csv(filename, index=False)
 
+    def save_to_csv(self, hourly_data, filename):
+        hourly_dataframe = pd.DataFrame(data=hourly_data)
+        hourly_dataframe.to_csv(filename, index=False)
 
     def vpn(self):
         pyautogui.moveTo(1502, 651)
@@ -109,49 +115,66 @@ class AirQualityParser:
         pyautogui.click()
         time.sleep(16)
 
-    
     def get_air_quality(self):
         data = self.open_json('cfo.list.json')
 
         for i, city in enumerate(data):
-            lat, lon, city_name, city_id = round(city['coord']['lat'], 2), round(city['coord']['lon'], 2), city['name'], city['id']
+            lat, lon, city_name, city_id = round(city['coord']['lat'], 2),
+            round(city['coord']['lon'], 2), city['name'], city['id']
 
             if not os.path.isdir('air_quality_by_city'):
                 os.makedirs('air_quality_by_city')
 
-            if os.path.isfile(f'air_quality_by_city/{self.startdate}_{self.enddate}_{city_id}.csv'):
-                 continue
-            
+            if os.path.isfile(f'air_quality_by_city/{self.startdate}_'
+                              f'{self.enddate}_{city_id}.csv'):
+                continue
+
             j = 1
             while j < 3:
                 try:
                     city_air_quality = self.get_city_air_quality(lat, lon)
-                    self.save_to_csv(city_air_quality, f'air_quality_by_city/{self.startdate}_{self.enddate}_{city_id}.csv')
+                    self.save_to_csv(city_air_quality,
+                                     f'air_quality_by_city/{self.startdate}'
+                                     f'_{self.enddate}_{city_id}.csv'
+                                     )
                     break
                 except Exception as e:
-                    city_air_quality = pd.DataFrame(data = [])
-                    delay = (e.args[0])['reason'].split()[0] 
+                    city_air_quality = pd.DataFrame(data=[])
+                    delay = (e.args[0])['reason'].split()[0]
 
                     if delay == 'Minutely':
                         timeout = 60 - datetime.now().second + 4
-                        print(f'{datetime.now().strftime('%d.%m.%Y %H:%M:%S')}: Exceeded {delay}, waiting {timeout} seconds')
+                        print(f'{datetime.now().strftime(
+                            f'%d.%m.%Y %H:%M:%S')}: '
+                            f'Exceeded {delay}, waiting {timeout} seconds')
                         time.sleep(timeout)
 
                     elif delay == 'Hourly':
                         new_dt = (datetime.now() + timedelta(hours=1))
-                        timeout = (datetime(new_dt.year, new_dt.month, new_dt.day, new_dt.hour, 0, 0) - datetime.now()).total_seconds() + 4
+                        timeout = (datetime(new_dt.year, new_dt.month,
+                                            new_dt.day, new_dt.hour,
+                                            0, 0) - datetime.now()
+                                   ).total_seconds() + 4
                         m = int(timeout//60)
                         s = int(timeout - m * 60)
-                        print(f'{datetime.now().strftime('%d.%m.%Y %H:%M:%S')}: Exceeded {delay}, waiting {m} minutes {s} seconds')
+                        print(f'{datetime.now().strftime('%d.%m.%Y %H:%M:%S')}'
+                              f': Exceeded {delay}, waiting {m} minutes '
+                              f'{s} seconds')
                         time.sleep(timeout)
 
                     elif delay == 'Daily':
                         new_dt = (datetime.now() + timedelta(days=1))
-                        timeout = (datetime(new_dt.year, new_dt.month, new_dt.day, 0, 0, 0) - datetime.now()).total_seconds() + 4
+                        timeout = (datetime(new_dt.year, new_dt.month,
+                                            new_dt.day, 0, 0, 0
+                                            )-datetime.now()).total_seconds()
+                        + 4
                         h = int(timeout//3600)
                         m = int((timeout - (h * 3600))//60)
                         s = int(timeout - h * 3600 - m * 60)
-                        print(f'{datetime.now().strftime('%d.%m.%Y %H:%M:%S')}: Exceeded {delay}, waiting {h} hours {m} minutes {s} seconds')
+                        print(f'{datetime.now().strftime('%d.%m.%Y %H:%M:%S')}'
+                              f': Exceeded '
+                              f'{delay}, waiting {h} hours {m} minutes '
+                              f'{s} seconds')
                         time.sleep(timeout)
 
                     else:
@@ -159,7 +182,11 @@ class AirQualityParser:
 
                     j += 1
 
-            print(f'{datetime.now().strftime('%d.%m.%Y %H:%M:%S')}: Attempt: {j}/3 {i+1}/{len(data)} City: {city_name} City_id: {city['id']} rows: {len(city_air_quality['date']) if len(city_air_quality) != 0 else 0}')
+            print(f'{datetime.now().strftime('%d.%m.%Y %H:%M:%S')}: Attempt: '
+                  f'{j}/3 {i+1}/{len(data)} City: {city_name} City_id: '
+                  f'{city['id']} rows: '
+                  f'{(len(city_air_quality['date']) if
+                      len(city_air_quality) != 0 else 0)}')
 
 
 if __name__ == '__main__':

@@ -11,17 +11,15 @@ class MergeCsv:
         self.file_to_save = file_to_save
         self.i = 0
 
-
     def open_json(self, filename: str) -> list[dict]:
-            try:
-                with open(filename) as file:
-                    data = json.load(file)
-            except Exception as e:
-                data = []
-                print(f'JSON file: {filename} is empty\n{e}')
-            
-            return data
+        try:
+            with open(filename) as file:
+                data = json.load(file)
+        except Exception as e:
+            data = []
+            print(f'JSON file: {filename} is empty\n{e}')
 
+        return data
 
     def get_city_info(self, city_id):
         city_list = self.open_json('cfo.list.json')
@@ -34,7 +32,6 @@ class MergeCsv:
                 lon = city['coord']['lon'] if 'coord' in city.keys() else 1000
                 return (city_name, region, lat, lon)
 
-
     def find_empty_info(self, city_name, region, lat, lon):
         fields = ''
 
@@ -46,9 +43,8 @@ class MergeCsv:
             fields += ' lat'
         elif lon == 1000:
             fields += ' lon'
-        
+
         return fields.strip()
-    
 
     def add_fields(self, df, city_id):
 
@@ -56,8 +52,12 @@ class MergeCsv:
         check_fields = self.find_empty_info(city_name, region, lat, lon)
 
         if check_fields:
-            print(f'{datetime.now().strftime('%d.%m.%Y %H:%M:%S')}: {self.i}/{len(os.listdir(self.weather_directory))+len(os.listdir(self.air_directory))} Info "{check_fields}" not found for {city_id}')
-            
+            list_len = len(os.listdir(self.weather_directory)) + \
+                len(os.listdir(self.air_directory))
+            print(f'{datetime.now().strftime('%d.%m.%Y %H:%M:%S')}: '
+                  f'{self.i}/{list_len} Info "{check_fields}" '
+                  f'not found for {city_id}')
+
         df['year'] = pd.DatetimeIndex(df['date']).year
         df['quarter'] = pd.DatetimeIndex(df['date']).quarter
         df['month'] = pd.DatetimeIndex(df['date']).month
@@ -71,10 +71,20 @@ class MergeCsv:
 
         return df
 
-
     def merge_csv_files(self):
         city_id_list = [city['id'] for city in self.open_json('cfo.list.json')]
-        period_list = sorted(list(set(['_'.join(filename.split('_')[:2]) for filename in os.listdir(self.air_directory)+os.listdir(self.weather_directory) if filename[-4:]=='.csv'])))
+
+        period_list = []
+
+        for filename in (
+            os.listdir(self.air_directory) + os.listdir(self.weather_directory)
+                ):
+
+            if filename[-4:] == '.csv':
+                filename = '_'.join(filename.split('_')[:2])
+                period_list.append(filename)
+
+        period_list = sorted(list(set(period_list)))
         excel_data = pd.read_excel('excel_data_to_load.xlsx')
 
         for period in period_list:
@@ -82,22 +92,38 @@ class MergeCsv:
                 self.i += 1
 
                 try:
-                    air_csv = pd.read_csv(f'{self.air_directory}/{period}_{city_id}.csv')
-                    weather_csv = pd.read_csv(f'{self.weather_directory}/{period}_{city_id}.csv')
+                    air_csv_file = f'{self.air_directory}/'
+                    f'{period}_{city_id}.csv'
+                    weather_csv_file = f'{self.weather_directory}/'
+                    f'{period}_{city_id}.csv'
+                    air_csv = pd.read_csv(air_csv_file)
+                    weather_csv = pd.read_csv(weather_csv_file)
                 except Exception as e:
-                    print(f'{datetime.now().strftime('%d.%m.%Y %H:%M:%S')}: {self.i}/{len(city_id_list)*2}: Error on {period}_{city_id}.csv')
+                    print(f'{datetime.now().strftime('%d.%m.%Y %H:%M:%S')}: '
+                          f'{self.i}/{len(city_id_list)*2}: '
+                          f'Error on {period}_{city_id}.csv')
                     continue
-                
+
                 air_csv = self.add_fields(air_csv, city_id)
                 weather_csv = self.add_fields(weather_csv, city_id)
-                
-                weather_air_csv = pd.merge(weather_csv, air_csv, on=['date', 'year', 'quarter', 'month', 'day', 'hour', 'city_id','city_name', 'region', 'lat', 'lon'])
-                weather_air_excel_csv = pd.merge(weather_air_csv, excel_data, on=['year', 'quarter', 'region'])
-                
-                print(f'{datetime.now().strftime('%d.%m.%Y %H:%M:%S')}: {self.i}/{len(city_id_list)*len(period_list)}')
+
+                fields_merge = ['date', 'year', 'quarter', 'month', 'day',
+                                'hour', 'city_id', 'city_name', 'region',
+                                'lat', 'lon']
+                weather_air_csv = pd.merge(weather_csv, air_csv,
+                                           on=fields_merge
+                                           )
+                weather_air_excel_csv = pd.merge(weather_air_csv,
+                                                 excel_data,
+                                                 on=['year', 'quarter',
+                                                     'region'
+                                                     ]
+                                                 )
+
+                print(f'{datetime.now().strftime('%d.%m.%Y %H:%M:%S')}: '
+                      f'{self.i}/{len(city_id_list)*len(period_list)}')
 
                 self.save_df(weather_air_excel_csv, self.file_to_save)
-
 
     def save_df(self, df, filename):
         if not os.path.isfile(filename):
@@ -107,5 +133,8 @@ class MergeCsv:
 
 
 if __name__ == '__main__':
-    merge_files = MergeCsv(weather_directory='weather_by_city', air_directory='air_quality_by_city', file_to_save='air_weather_data.csv')
+    merge_files = MergeCsv(weather_directory='weather_by_city',
+                           air_directory='air_quality_by_city',
+                           file_to_save='air_weather_data.csv'
+                           )
     merge_files.merge_csv_files()
