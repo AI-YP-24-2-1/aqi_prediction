@@ -56,13 +56,13 @@ def setup_logging() -> None:
 
     log_dir = 'logs'
     log_file_path = os.path.join(log_dir, 'log_file.log')
-    
+
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
-        
+
     if not os.path.isfile(log_file_path):
         open(log_file_path, 'a').close()
-    
+
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s - %(levelname)s - %(message)s',
                         handlers=[RotatingFileHandler(log_file_path,
@@ -84,6 +84,7 @@ def log(level: str, message: str, *args) -> None:
         logging.warning(message.format(*args))
 
 setup_logging()
+
 
 @app.post("/fit", response_model=ApiResponse, status_code=HTTPStatus.CREATED)
 async def fit(file: UploadFile = File(...), model_name: str = Form(...)):

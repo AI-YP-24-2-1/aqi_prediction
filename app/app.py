@@ -8,15 +8,11 @@ import httpx
 
 st.set_page_config(layout="wide")
 
-if not os.getcwd().endswith('aqi_prediction'):
-    os.chdir('../')
-
-
 def plots(df: pd.DataFrame, column: str, region: str) -> None:
     '''
     Creating plots by year and region
     '''
-    
+
     df = df if region == 'Все регионы' else df.loc[df['region'] == region]
 
     fig, axes = plt.subplots(1, 2, figsize=(18, 6))
@@ -41,12 +37,11 @@ def plots(df: pd.DataFrame, column: str, region: str) -> None:
     plt.tight_layout()
     st.pyplot(plt)
 
-
 def boxplot(df: pd.DataFrame, column: str, region: str) -> None:
     '''
     Creating boxplots
     '''
-    
+
     df = df if region == 'Все регионы' else df.loc[df['region'] == region]
 
     Q1 = df[column].quantile(0.25)
