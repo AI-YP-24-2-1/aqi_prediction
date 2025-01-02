@@ -17,7 +17,6 @@ from sklearn.linear_model import SGDRegressor
 
 
 app = FastAPI()
-
 models = {}
 
 
@@ -27,7 +26,7 @@ class ApiResponse(BaseModel):
 
 
 class ModelListResponseBase(BaseModel):
-    models: List[str]
+    models: List[Any]
 
 
 class ModelListResponse(RootModel[List[ModelListResponseBase]]):
@@ -50,23 +49,29 @@ def delete_file(file_path: str):
     '''
     os.remove(file_path)
 
-def setup_logging(self) -> None:
+def setup_logging() -> None:
     '''
     logging settings
     '''
-    max_size = 10 * 1024 * 1024
-    backup_count = 10
 
-    logger = logging.getLogger('Fastapi_logger')
-    logger.setLevel(logging.INFO)
-
-    handler = RotatingFileHandler('logs/log_file.log', maxBytes=max_size, backupCount=backup_count)
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    log_dir = 'logs'
+    log_file_path = os.path.join(log_dir, 'log_file.log')
     
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+        
+    if not os.path.isfile(log_file_path):
+        open(log_file_path, 'a').close()
+    
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s - %(levelname)s - %(message)s',
+                        handlers=[RotatingFileHandler(log_file_path,
+                                                      maxBytes=10*1024*1024,
+                                                      backupCount=10),
+                                  logging.StreamHandler()]
+                                  )
 
-def log(self, level: str, message: str, *args) -> None:
+def log(level: str, message: str, *args) -> None:
     '''
     Logging messages
     '''
@@ -77,10 +82,8 @@ def log(self, level: str, message: str, *args) -> None:
         logging.error(message.format(*args))
     elif level == 'warning':
         logging.warning(message.format(*args))
-    
-    with open('logs/logs.log', 'a') as log_file:
-        log_file.write(message.format(*args))
 
+setup_logging()
 
 @app.post("/fit", response_model=ApiResponse, status_code=HTTPStatus.CREATED)
 async def fit(file: UploadFile = File(...), model_name: str = Form(...)):
@@ -112,7 +115,7 @@ async def fit(file: UploadFile = File(...), model_name: str = Form(...)):
     
     df = pd.read_csv(StringIO(contents.decode('utf-8')))
 
-    log('info', 'Splitting as x and y')
+    log('info', 'Splitting at x and y')
     X_aqi = df.drop(['european_aqi'], axis=1).select_dtypes(['float', 'int'])
     Y_aqi = df['european_aqi']
     log('info', 'Dataset split at x and y')
@@ -279,7 +282,7 @@ async def list_models():
 
     log('info', 'Showing loaded models')
 
-    return ModelListResponseBase(models=list(models))
+    return ModelListResponseBase(models=[model for model in models])
 
 
 @app.get("/list_models_not_loaded", response_model=ModelListResponseBase)
@@ -291,13 +294,12 @@ async def list_models_not_loaded():
     models_list = []
     
     log('info', 'Showing not loaded models')
-
     for model in os.listdir('models'):
         if (model.replace('.pickle', '') not in models and
                 model[-6:] == 'pickle'):
 
             model = model.replace('.pickle', '')
-            models_list.append(models)
+            models_list.append(model)
 
     return ModelListResponseBase(models=models_list)
 

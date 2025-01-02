@@ -1,0 +1,133 @@
+2025-01-02 21:46:54,758 - INFO - Showing not loaded models
+2025-01-02 21:47:02,231 - INFO - Showing not loaded models
+2025-01-02 21:47:02,283 - INFO - Showing not loaded models
+2025-01-02 21:47:03,778 - INFO - Showing not loaded models
+2025-01-02 21:47:03,821 - INFO - Showing loaded models
+2025-01-02 22:15:45,369 - INFO - Showing not loaded models
+2025-01-02 22:17:00,039 - INFO - Showing not loaded models
+2025-01-02 22:17:31,004 - INFO - Showing not loaded models
+2025-01-02 22:17:31,027 - INFO - Showing not loaded models
+2025-01-02 22:18:41,490 - INFO - Showing not loaded models
+2025-01-02 22:18:41,512 - INFO - Showing not loaded models
+2025-01-02 22:19:34,553 - INFO - Showing not loaded models
+2025-01-02 22:19:34,589 - INFO - Showing not loaded models
+2025-01-02 22:19:36,493 - INFO - Showing not loaded models
+2025-01-02 22:19:36,517 - INFO - Showing loaded models
+2025-01-02 22:20:28,653 - INFO - Showing not loaded models
+2025-01-02 22:20:28,677 - INFO - Showing not loaded models
+2025-01-02 22:20:56,395 - INFO - Showing not loaded models
+2025-01-02 22:20:56,425 - INFO - Showing not loaded models
+2025-01-02 22:20:59,406 - INFO - Showing not loaded models
+2025-01-02 22:20:59,460 - INFO - Showing loaded models
+2025-01-02 22:21:57,022 - INFO - Showing not loaded models
+2025-01-02 22:21:57,048 - INFO - Showing not loaded models
+2025-01-02 22:21:58,049 - INFO - Showing not loaded models
+2025-01-02 22:21:58,093 - INFO - Showing loaded models
+2025-01-02 22:21:59,525 - INFO - Showing not loaded models
+2025-01-02 22:21:59,569 - INFO - Loading main model
+2025-01-02 22:21:59,577 - INFO - Main model loaded
+2025-01-02 22:22:01,136 - INFO - Showing not loaded models
+2025-01-02 22:22:01,158 - INFO - Showing loaded models
+2025-01-02 22:22:13,364 - INFO - Showing not loaded models
+2025-01-02 22:22:50,942 - INFO - Showing not loaded models
+2025-01-02 22:23:09,344 - INFO - Showing loaded models
+2025-01-02 22:23:49,319 - INFO - Showing not loaded models
+2025-01-02 22:24:00,301 - INFO - Reading file
+2025-01-02 22:24:00,394 - INFO - File read
+2025-01-02 22:24:01,428 - INFO - Splitting as x and y
+2025-01-02 22:24:01,489 - INFO - Dataset split at x and y
+2025-01-02 22:24:01,490 - INFO - Splitting dataset and train and test
+2025-01-02 22:24:01,520 - INFO - Dataset split at train and test
+2025-01-02 22:24:01,520 - INFO - Filling np.nan
+2025-01-02 22:24:01,581 - INFO - np.nan filled
+2025-01-02 22:24:01,581 - INFO - Scaling train_x
+2025-01-02 22:24:01,671 - INFO - Train_x scaled
+2025-01-02 22:24:01,672 - INFO - Training model
+2025-01-02 22:24:01,707 - INFO - Model trained
+2025-01-02 22:24:01,707 - INFO - Saving model
+2025-01-02 22:24:01,710 - INFO - Model saved
+2025-01-02 22:24:11,703 - INFO - Showing loaded models
+2025-01-02 22:24:33,162 - INFO - Showing not loaded models
+2025-01-02 22:24:34,952 - INFO - Showing not loaded models
+2025-01-02 22:24:52,815 - INFO - Showing loaded models
+2025-01-02 22:24:52,993 - INFO - Reading file
+2025-01-02 22:24:53,016 - INFO - File read
+2025-01-02 22:24:53,017 - INFO - Selecting numeric columns
+2025-01-02 22:24:53,615 - INFO - Numeric columns selected
+2025-01-02 22:24:53,615 - INFO - Filling np.nan
+2025-01-02 22:24:53,672 - INFO - np.nan filled
+2025-01-02 22:24:53,672 - INFO - Scaling data
+2025-01-02 22:24:53,767 - INFO - Data scaled
+2025-01-02 22:24:53,767 - INFO - Predicting AQI with test_model model
+2025-01-02 22:24:53,774 - INFO - AQI predicted
+2025-01-02 22:24:53,791 - INFO - Saving prediction
+2025-01-02 22:24:56,648 - INFO - Prediction saved
+2025-01-02 22:24:56,655 - INFO - Showing not loaded models
+2025-01-02 22:25:13,463 - INFO - Showing loaded models
+2025-01-02 22:25:13,616 - INFO - Reading file
+2025-01-02 22:25:13,621 - INFO - File read
+2025-01-02 22:25:13,621 - INFO - Selecting numeric columns
+2025-01-02 22:25:14,265 - INFO - Numeric columns selected
+2025-01-02 22:25:14,265 - INFO - Filling np.nan
+2025-01-02 22:25:14,315 - INFO - np.nan filled
+2025-01-02 22:25:14,315 - INFO - Scaling data
+2025-01-02 22:25:14,400 - INFO - Data scaled
+2025-01-02 22:25:14,400 - INFO - Predicting AQI with test_model model
+2025-01-02 22:25:14,404 - INFO - AQI predicted
+2025-01-02 22:25:14,415 - INFO - Saving prediction
+2025-01-02 22:25:16,732 - INFO - Prediction saved
+2025-01-02 22:25:19,136 - INFO - Showing not loaded models
+2025-01-02 22:25:40,370 - INFO - Showing loaded models
+2025-01-02 19:30:33,551 - INFO - Showing not loaded models
+2025-01-02 19:30:36,883 - INFO - Showing not loaded models
+2025-01-02 19:30:36,946 - INFO - Showing not loaded models
+2025-01-02 19:30:38,032 - INFO - Showing not loaded models
+2025-01-02 19:30:38,090 - INFO - Showing loaded models
+2025-01-02 19:30:40,083 - INFO - Showing not loaded models
+2025-01-02 19:30:40,136 - INFO - Loading main model
+2025-01-02 19:30:40,144 - INFO - Main model loaded
+2025-01-02 19:30:41,690 - INFO - Showing not loaded models
+2025-01-02 19:30:41,749 - INFO - Showing loaded models
+2025-01-02 19:30:43,385 - INFO - Showing not loaded models
+2025-01-02 19:30:43,436 - INFO - Showing not loaded models
+2025-01-02 19:30:45,443 - INFO - Showing not loaded models
+2025-01-02 19:30:46,575 - INFO - Showing not loaded models
+2025-01-02 19:30:46,644 - INFO - Loading european_model model
+2025-01-02 19:30:46,648 - INFO - Model european_model loaded
+2025-01-02 19:30:48,101 - INFO - Showing not loaded models
+2025-01-02 19:30:48,278 - INFO - Showing loaded models
+2025-01-02 19:30:59,890 - INFO - Showing not loaded models
+2025-01-02 19:31:21,920 - INFO - Showing not loaded models
+2025-01-02 19:31:22,088 - INFO - Showing not loaded models
+2025-01-02 19:31:33,016 - INFO - Reading file
+2025-01-02 19:31:33,025 - INFO - File read
+2025-01-02 19:31:33,651 - INFO - Splitting at x and y
+2025-01-02 19:31:33,666 - INFO - Dataset split at x and y
+2025-01-02 19:31:33,667 - INFO - Splitting dataset and train and test
+2025-01-02 19:31:33,691 - INFO - Dataset split at train and test
+2025-01-02 19:31:33,692 - INFO - Filling np.nan
+2025-01-02 19:31:33,747 - INFO - np.nan filled
+2025-01-02 19:31:33,748 - INFO - Scaling train_x
+2025-01-02 19:31:33,778 - INFO - Train_x scaled
+2025-01-02 19:31:33,779 - INFO - Training model
+2025-01-02 19:31:33,801 - INFO - Model trained
+2025-01-02 19:31:33,802 - INFO - Saving model
+2025-01-02 19:31:33,808 - INFO - Model saved
+2025-01-02 19:31:39,773 - INFO - Showing not loaded models
+2025-01-02 19:31:56,094 - INFO - Showing loaded models
+2025-01-02 19:32:00,150 - INFO - Showing not loaded models
+2025-01-02 19:32:01,087 - INFO - Showing not loaded models
+2025-01-02 19:32:18,999 - INFO - Showing loaded models
+2025-01-02 19:32:19,177 - INFO - Reading file
+2025-01-02 19:32:19,186 - INFO - File read
+2025-01-02 19:32:19,187 - INFO - Selecting numeric columns
+2025-01-02 19:32:19,719 - INFO - Numeric columns selected
+2025-01-02 19:32:19,719 - INFO - Filling np.nan
+2025-01-02 19:32:19,766 - INFO - np.nan filled
+2025-01-02 19:32:19,766 - INFO - Scaling data
+2025-01-02 19:32:19,813 - INFO - Data scaled
+2025-01-02 19:32:19,814 - INFO - Predicting AQI with aqi_model model
+2025-01-02 19:32:19,821 - INFO - AQI predicted
+2025-01-02 19:32:19,847 - INFO - Saving prediction
+2025-01-02 19:32:23,709 - INFO - Prediction saved
+2025-01-02 19:32:25,910 - INFO - Showing not loaded models

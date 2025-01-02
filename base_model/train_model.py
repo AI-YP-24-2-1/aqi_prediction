@@ -226,6 +226,7 @@ class BaseModel:
             del train_y
             gc.collect()
             time.sleep(5)
+            break
 
         for model_name in list(self.models.keys()):
             self.log('info', 'Saving {} model', model_name)
@@ -294,7 +295,7 @@ class BaseModel:
                  )
 
 
-base_model = BaseModel(chunksize=20000000)
+base_model = BaseModel(chunksize=5000000)
 # param_grid = {
 # 'alpha': [0, 0.2],
 # 'l1_ratio': [0.0001, 0.001, 0.01],
