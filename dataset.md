@@ -1,4 +1,4 @@
-* date - Date 2020.01.01 - 2024.10.25
+* date - Date 2020.01.01 - 2024.10.30
 * year - Year
 * month - Month
 * day - Day
@@ -36,3 +36,20 @@
 * formaldehyde - It is a volatile organic compound (VOC) that can be released from various sources, including building materials, household products, furniture, and tobacco smoke (ppm)
 * pm10_wildfires - Particulate matter with diameter smaller than 10 µm (PM10) caused by wildfires (μg/m³)
 * nitrogen_monoxide - Atmospheric gases close to surface (10 meter above ground) (μg/m³)
+
+* cultivated area of agricultures - Area used for growing agricultures (thousands of hectares)
+* built housing stock - Area of newly built apartments (thousands m2)
+* area - Region area (km2)
+* wildfire area - Area of land that suffered from wildfires (hectares)
+* forest area - Area of forests (km2)
+* poverty rate - Poverty rate (%)
+* number of landliffs - number of landliffs (units)
+* share of city citizens - share of city citizens out of all citizens. Indicator shows urbanization level (%)
+* population - Population of region
+* income - Average income per month (rub)
+* number of cars - Number of cars per 1000 people
+* number of pollutant objects - number of pollutant objects (units)
+* number of pollutant sources - number of pollutant sources(units)
+* number of events to reduce emissions - number of events to reduce emissions (units)
+* respiratory diseases - number of respiratory diseases per 100000 people
+* circulatory system diseases - number of circulatory system diseases per 100000 people
