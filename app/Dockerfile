@@ -2,6 +2,7 @@ FROM python:3.13
 WORKDIR /app
 COPY requirements.txt .
 COPY models/ .
+COPY logs/ .
 COPY main.py .
 COPY app.py .
 RUN pip install --no-cache-dir -r requirements.txt

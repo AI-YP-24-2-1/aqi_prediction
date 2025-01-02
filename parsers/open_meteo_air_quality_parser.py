@@ -1,14 +1,13 @@
+from datetime import datetime, timedelta
+import time
+import json
+import os.path
+
 import openmeteo_requests
 
 import requests_cache
 import pandas as pd
 from retry_requests import retry
-
-from datetime import datetime, timedelta
-import time
-import json
-import os.path
-import pyautogui
 
 
 class AirQualityParser:
@@ -17,6 +16,10 @@ class AirQualityParser:
         self.enddate = enddate
 
     def open_json(self, filename: str) -> list[dict]:
+        '''
+        Open json
+        '''
+
         try:
             with open(filename) as file:
                 data = json.load(file)
@@ -27,7 +30,10 @@ class AirQualityParser:
         return data
 
     def get_city_air_quality(self, lat: float, lon: float):
-        # Setup the Open-Meteo API client with cache and retry on error
+        '''
+        Get air quality by city
+        '''
+
         cache_session = requests_cache.CachedSession('.cache', expire_after=-1)
         retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
         openmeteo = openmeteo_requests.Client(session=retry_session)
@@ -102,20 +108,17 @@ class AirQualityParser:
         return hourly_data
 
     def save_to_csv(self, hourly_data, filename):
+        '''
+        Save to csv
+        '''
         hourly_dataframe = pd.DataFrame(data=hourly_data)
         hourly_dataframe.to_csv(filename, index=False)
 
-    def vpn(self):
-        pyautogui.moveTo(1502, 651)
-        time.sleep(0.3)
-        pyautogui.click()
-        time.sleep(5.2)
-        pyautogui.moveTo(1501, 403)
-        time.sleep(0.4)
-        pyautogui.click()
-        time.sleep(16)
-
     def get_air_quality(self):
+        '''
+        Get air_quality
+        '''
+
         data = self.open_json('cfo.list.json')
 
         for i, city in enumerate(data):
@@ -145,7 +148,7 @@ class AirQualityParser:
                     if delay == 'Minutely':
                         timeout = 60 - datetime.now().second + 4
                         print(f'{datetime.now().strftime(
-                            f'%d.%m.%Y %H:%M:%S')}: '
+                            '%d.%m.%Y %H:%M:%S')}: '
                             f'Exceeded {delay}, waiting {timeout} seconds')
                         time.sleep(timeout)
 

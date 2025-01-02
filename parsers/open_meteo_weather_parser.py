@@ -1,13 +1,13 @@
+from datetime import datetime, timedelta
+import time
+import json
+import os.path
+
 import openmeteo_requests
 
 import requests_cache
 import pandas as pd
 from retry_requests import retry
-
-from datetime import datetime, timedelta
-import time
-import json
-import os.path
 
 
 class WeatherParser:
@@ -16,6 +16,10 @@ class WeatherParser:
         self.enddate = enddate
 
     def open_json(self, filename: str) -> list[dict]:
+        '''
+        Open json
+        '''
+
         try:
             with open(filename) as file:
                 data = json.load(file)
@@ -26,6 +30,10 @@ class WeatherParser:
         return data
 
     def get_city_weather(self, lat: float, lon: float):
+        '''
+        Get weather by city
+        '''
+
         # Setup the Open-Meteo API client with cache and retry on error
         cache_session = requests_cache.CachedSession('.cache', expire_after=-1)
         retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
@@ -83,10 +91,18 @@ class WeatherParser:
         return hourly_data
 
     def save_to_csv(self, hourly_data, filename):
+        '''
+        Save to csv
+        '''
+
         hourly_dataframe = pd.DataFrame(data=hourly_data)
         hourly_dataframe.to_csv(filename, index=False)
 
     def get_weather(self):
+        '''
+        Get weather
+        '''
+
         data = self.open_json('cfo.list.json')
 
         for i, city in enumerate(data):

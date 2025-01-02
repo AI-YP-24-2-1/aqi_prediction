@@ -1,7 +1,7 @@
-import pandas as pd
 import json
 import os
 from datetime import datetime
+import pandas as pd
 
 
 class MergeCsv:
@@ -12,6 +12,10 @@ class MergeCsv:
         self.i = 0
 
     def open_json(self, filename: str) -> list[dict]:
+        '''
+        Opening json
+        '''
+
         try:
             with open(filename) as file:
                 data = json.load(file)
@@ -22,6 +26,10 @@ class MergeCsv:
         return data
 
     def get_city_info(self, city_id):
+        '''
+        Get info about city
+        '''
+
         city_list = self.open_json('cfo.list.json')
 
         for city in city_list:
@@ -33,6 +41,10 @@ class MergeCsv:
                 return (city_name, region, lat, lon)
 
     def find_empty_info(self, city_name, region, lat, lon):
+        '''
+        Finding empty fields
+        '''
+
         fields = ''
 
         if city_name == '':
@@ -47,6 +59,9 @@ class MergeCsv:
         return fields.strip()
 
     def add_fields(self, df, city_id):
+        '''
+        Adding new fields
+        '''
 
         city_name, region, lat, lon = self.get_city_info(city_id)
         check_fields = self.find_empty_info(city_name, region, lat, lon)
@@ -72,8 +87,11 @@ class MergeCsv:
         return df
 
     def merge_csv_files(self):
-        city_id_list = [city['id'] for city in self.open_json('cfo.list.json')]
+        '''
+        Merging csv files
+        '''
 
+        city_id_list = [city['id'] for city in self.open_json('cfo.list.json')]
         period_list = []
 
         for filename in (
@@ -98,7 +116,7 @@ class MergeCsv:
                     f'{period}_{city_id}.csv'
                     air_csv = pd.read_csv(air_csv_file)
                     weather_csv = pd.read_csv(weather_csv_file)
-                except Exception as e:
+                except Exception:
                     print(f'{datetime.now().strftime('%d.%m.%Y %H:%M:%S')}: '
                           f'{self.i}/{len(city_id_list)*2}: '
                           f'Error on {period}_{city_id}.csv')
@@ -126,6 +144,10 @@ class MergeCsv:
                 self.save_df(weather_air_excel_csv, self.file_to_save)
 
     def save_df(self, df, filename):
+        '''
+        Saving df
+        '''
+
         if not os.path.isfile(filename):
             df.to_csv(filename, mode='w', header=True, index=False)
         else:

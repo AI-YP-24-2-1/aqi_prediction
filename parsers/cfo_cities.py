@@ -1,7 +1,7 @@
-from dadata import Dadata
 from datetime import datetime
 import time
 import json
+from dadata import Dadata
 
 
 class DadataParser:
@@ -60,21 +60,21 @@ class DadataParser:
         """
 
         city_not_found_list = []
-        city_list, cfo_list = self.open_json(city_list_filename),
-        self.open_json(cfo_list_filename)
+        city_list = self.open_json(city_list_filename)
+        cfo_list = self.open_json(cfo_list_filename)
         ru_city_list_len = len([city for city in city_list
                                 if city['country'] == 'RU'])
 
         n = 0
-        for i in range(len(city_list)):
-            if (city_list[i]['country'] == 'RU'
-                    and city_list[i] not in cfo_list):
+        for i, city in enumerate(city_list):
+            if (city['country'] == 'RU'
+                    and city not in cfo_list):
                 n += 1
 
                 try:
                     cfo, region = self.__check_cfo(
-                        city_list[i]['coord']['lat'],
-                        city_list[i]['coord']['lon']
+                        city['coord']['lat'],
+                        city['coord']['lon']
                         )
                 except Exception as e:
                     print(f'{datetime.now().strftime('%d.%m.%Y %H:%M:%S')}:'
@@ -82,11 +82,11 @@ class DadataParser:
                     break
 
                 if cfo == 'Центральный':
-                    city_list[i]['region'] = region
-                    del city_list[i]['state']
-                    cfo_list.append(city_list[i])
+                    city['region'] = region
+                    del city['state']
+                    cfo_list.append(city)
                 elif not cfo:
-                    city_not_found_list.append(city_list[i])
+                    city_not_found_list.append(city)
                     print(f'{datetime.now().strftime('%d.%m.%Y %H:%M:%S')}: '
                           f'city not found {city_list[i]}')
 
@@ -94,7 +94,7 @@ class DadataParser:
                       f'ru_cities: '
                       f'{n}/{ru_city_list_len} all_cities: '
                       f'{i}/{len(city_list)} '
-                      f'added: {len(cfo_list)} City: {city_list[i]['name']} '
+                      f'added: {len(cfo_list)} City: {city['name']} '
                       f'CFO: {cfo}')
 
         self.write_json(cfo_list_filename, cfo_list)
@@ -102,12 +102,10 @@ class DadataParser:
 
 
 if __name__ == '__main__':
-    with open('token.json') as file:
-        data = json.load(file)
+    with open('token.json') as file_token:
+        dadata_token = json.load(file_token)[0]['dadata_TOKEN']
 
-    token = data[0]['dadata_TOKEN']
-
-    dadata_parser = DadataParser(token, timeout=0.5)
+    dadata_parser = DadataParser(dadata_token, timeout=0.5)
     dadata_parser.get_cfo_cities('city.list.json', 'cfo.list.json',
                                  'city.not.found.json'
                                  )
