@@ -32,8 +32,15 @@
 
 ## Деплой проекта
 Для запуска Streamlit сервиса с Fastapi необходимо:
-1. Клонировать репозиторий, перейти и директорию "aqi_prediction"
-2. Контейнеризовать приложение в Docker
+1. Клонировать репозиторий
+```
+git clone https://github.com/AI-YP-24-2-1/aqi_prediction.git
+```
+2. перейти и директорию "aqi_prediction"
+```
+cd aqi_prediction
+```
+3. Контейнеризовать приложение в Docker
 ```
 docker-compose build
 docker-compose up
@@ -46,13 +53,18 @@ Streamlit сервис будет доступен по url: http://localhost:85
 Для этого в меню слева загружаем csv файл (тестовый файл можно взять в директории fast_api_dataset/dataset.csv)<br>
 ![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/load_train_data.png?raw=true)
 
-На этом этапе у нас есть 3 раздела:
+На этом этапе у нас есть 4 раздела:
 * Загрузка и удаление моделей - мы можем посмотреть загруженные и незагруженные модели, можем загрузить выбранную модель или удалить все модели
-![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/loading_deleting_models.png?raw=true)
+![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/loading_deleting_models.png?raw=true)<br>
+
 * Анализ загруженных данных для обучения - в этом разделе отображается информация о загруженном датасете (размер датасета, информация о показателях, корреляционная матрица и графики по показателям)
-![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/train_data_analysis.png?raw=true)
+![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/train_data_analysis.png?raw=true)<br>
+
 * Обучение моделей - в этом разделе необходимо указать название модели и начать ее обучение. После обучения модель будет отображаться в списке загруженных моделей в разделе "Загрузка и удаление моделей"
-![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/train_model.png?raw=true)
+![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/train_model.png?raw=true)<br>
+
+* Сравнение моделей - В этом разделе необходимо выбрать две загруженные модели. Для них будет отображены гиперпараметры, метрики качества и коэффициенты модели, а также кривые обучения
+![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/compare_models.png?raw=true)
 
 2. Есть возможность загрузить csv файл с данными для прогнозирования AQI
 Для этого в меню слева загружаем csv файл (тестовый файл можно взять в директории fast_api_dataset/dataset_predict.csv)<br>
@@ -60,10 +72,12 @@ Streamlit сервис будет доступен по url: http://localhost:85
 
 На этом этапе у нас появляется 2 новых раздела:
 * Анализ загруженных данных для прогноза - в этом разделе отображается информация о загруженном датасете (размер датасета, информация о показателях, корреляционная матрица и графики по показателям)
-![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/forecast_data_analysis.png?raw=true)
+![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/forecast_data_analysis.png?raw=true)<br>
+
 * Построение прогноза - мы можем выбрать модель из списка загруженных моделей и сделать прогноз. После построения прогноза можно будет загрузить csv файл с прогнозными значениями AQI
 ![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/train_model.png?raw=true)
 
+## Демонстрация работы Streamlit
 ![alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/Streamlit_video.gif?raw=true)
 
 ## Методы Fastapi
@@ -76,8 +90,10 @@ Fastapi доступен по url: http://0.0.0.0:8000/
 * POST /load - загружает выбранную модель
 * POST /predict - строит прогноз AQI
 * GET /list_models - отображает список загруженных моделей
+* GET /list_models_for_comparison - загружает обученные модели для которых есть кривые обучения
 * GET /list_models_not_loaded - отображает список незагруженных моделей
 * DELETE /remove_all - удаляет все модели
+* POST /compare_models - отображает данные модели для сравнения
 
 # Команда проекта
 Куратор проекта -  [Марк Блуменау](http://telegram.me/markblumenau)

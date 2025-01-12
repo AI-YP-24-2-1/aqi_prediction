@@ -301,50 +301,55 @@ if file_train is not None:
             if model_name_1 == model_name_2:
                 st.write('Модели должны быть разными')
             else:
-                st.write('Гиперпараметры моделей:')
-                params = pd.DataFrame({'alpha': [models_data_1['models_data']['alpha'],
-                                                models_data_2['models_data']['alpha']
-                                                ],
-                                    'l1_ratio': [models_data_1['models_data']['l1_ratio'],
-                                                models_data_2['models_data']['l1_ratio']
-                                                ],
-                                    'max_iter': [models_data_1['models_data']['max_iter'],
-                                                models_data_2['models_data']['max_iter']
-                                                ],
-                                    'tol': [models_data_1['models_data']['tol'],
-                                            models_data_2['models_data']['tol']
-                                            ],
-                                    'eta0': [models_data_1['models_data']['eta0'],
-                                            models_data_2['models_data']['eta0']
-                                            ]
-                                            }
-                                    ).T
-                params = params.rename(columns={0: model_name_1, 1: model_name_2})
-                st.write(params)
+                params_comparison, metrics_comparison, coef_comparison = st.columns(3)
 
-                st.write('Качество моделей:')
-                metrics = pd.DataFrame({'r2': [models_data_1['models_data']['r2'],
-                                            models_data_2['models_data']['r2']
-                                            ],
-                                        'MSE': [models_data_1['models_data']['MSE'],
-                                                models_data_2['models_data']['MSE']
+                with params_comparison:
+                    st.write('Гиперпараметры моделей:')
+                    params = pd.DataFrame({'alpha': [models_data_1['models_data']['alpha'],
+                                                    models_data_2['models_data']['alpha']
+                                                    ],
+                                        'l1_ratio': [models_data_1['models_data']['l1_ratio'],
+                                                    models_data_2['models_data']['l1_ratio']
+                                                    ],
+                                        'max_iter': [models_data_1['models_data']['max_iter'],
+                                                    models_data_2['models_data']['max_iter']
+                                                    ],
+                                        'tol': [models_data_1['models_data']['tol'],
+                                                models_data_2['models_data']['tol']
                                                 ],
-                                        'RMSE': [models_data_1['models_data']['RMSE'],
-                                                models_data_2['models_data']['RMSE']
+                                        'eta0': [models_data_1['models_data']['eta0'],
+                                                models_data_2['models_data']['eta0']
                                                 ]
                                                 }
                                         ).T
-                metrics = metrics.rename(columns={0: model_name_1, 1: model_name_2})
-                st.write(metrics)
+                    params = params.rename(columns={0: model_name_1, 1: model_name_2})
+                    st.write(params)
+                
+                with metrics_comparison:
+                    st.write('Качество моделей:')
+                    metrics = pd.DataFrame({'r2': [models_data_1['models_data']['r2'],
+                                                models_data_2['models_data']['r2']
+                                                ],
+                                            'MSE': [models_data_1['models_data']['MSE'],
+                                                    models_data_2['models_data']['MSE']
+                                                    ],
+                                            'RMSE': [models_data_1['models_data']['RMSE'],
+                                                    models_data_2['models_data']['RMSE']
+                                                    ]
+                                                    }
+                                            ).T
+                    metrics = metrics.rename(columns={0: model_name_1, 1: model_name_2})
+                    st.write(metrics)
 
-                st.write('Коэффициенты моделей:')
-                coef = pd.DataFrame([models_data_1['models_data']['coef'],
-                                    models_data_2['models_data']['coef']
-                                    ]
-                                    ).T
-                coef = coef.rename(columns={0: model_name_1, 1: model_name_2})
-                st.write(coef)
-
+                    with coef_comparison:
+                        st.write('Коэффициенты моделей:')
+                        coef = pd.DataFrame([models_data_1['models_data']['coef'],
+                                            models_data_2['models_data']['coef']
+                                            ]
+                                            ).T
+                        coef = coef.rename(columns={0: model_name_1, 1: model_name_2})
+                        st.write(coef)
+                
                 st.write('Кривая обучения:')
                 loss_list_1 = models_data_1['models_data']['loss_list']
                 loss_list_2 = models_data_2['models_data']['loss_list']
