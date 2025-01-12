@@ -75,7 +75,7 @@ Streamlit сервис будет доступен по url: http://localhost:85
 ![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/forecast_data_analysis.png?raw=true)<br>
 
 * Построение прогноза - мы можем выбрать модель из списка загруженных моделей и сделать прогноз. После построения прогноза можно будет загрузить csv файл с прогнозными значениями AQI
-![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/train_model.png?raw=true)
+![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/model_forecast.png?raw=true)
 
 ## Демонстрация работы Streamlit
 ![alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/Streamlit_video.gif?raw=true)
