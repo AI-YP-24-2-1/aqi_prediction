@@ -1,9 +1,10 @@
-import os
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import httpx
+import numpy as np
+import plotly.graph_objects as go
 
 
 st.set_page_config(layout="wide")
@@ -182,18 +183,189 @@ if file_train is not None:
     with st.expander('Обучение моделей'):
         model_name = st.text_input('Введите название модели:', key='fit')
 
+        st.write('Укажите гиперпараметры модели. Если поле будет пустым,'
+                 'то значение будет выбрано по умолчанию')
+        alpha, l1_ratio, max_iter, tol, eta0 = st.columns(5)
+
+        with alpha:
+            alpha = st.text_input('Введите alpha:', key='alpha')
+        with l1_ratio:
+            l1_ratio = st.text_input('Введите l1_ratio:', key='l1_ratio')
+        with max_iter:
+            max_iter = st.text_input('Введите max_iter:', key='max_iter')
+        with tol:
+            tol = st.text_input('Введите tol:', key='tol')
+        with eta0:
+            eta0 = st.text_input('Введите eta0:', key='eta0')
+
+        alpha = alpha if alpha != '' else -1
+        l1_ratio = l1_ratio if l1_ratio != '' else -1
+        max_iter = max_iter if max_iter != '' else -1
+        tol = tol if tol != '' else -1
+        eta0 = eta0 if eta0 != '' else -1
+
         button1 = st.button('Начать обучение')
+
+        data = {'model_name': model_name,
+                'alpha': alpha,
+                'l1_ratio': l1_ratio,
+                'max_iter': max_iter,
+                'tol': tol,
+                'eta0': eta0
+                }
 
         if button1:
             response = httpx.post("http://0.0.0.0:8000/fit",
                                   files={'file': csv_file_train},
-                                  data={'model_name': model_name},
+                                  data=data,
                                   timeout=1000000
                                   )
+
             if response.status_code == 201:
                 st.write(response.json()['message'])
+                data = response.json()['data']
+
+                params_col, metrics_col, coef_col = st.columns(3)
+
+                with params_col:
+                    st.write('Гиперпараметры модели:')
+                    params = pd.DataFrame({'alpha': [data['alpha']],
+                                    'l1_ratio': [data['l1_ratio']],
+                                    'max_iter': [data['max_iter']],
+                                    'tol': [data['tol']],
+                                    'eta0': [data['eta0']]}
+                                    ).T
+                    params = params.rename(columns={0: 'value'})
+                    st.write(params)
+
+                with metrics_col:
+                    st.write('Качество модели:')
+                    metrics = pd.DataFrame({'r2': [data['r2']],
+                                            'MSE': [data['MSE']],
+                                            'RMSE': [data['RMSE']]}
+                                            ).T
+                    metrics = metrics.rename(columns={0: 'value'})
+                    st.write(metrics)
+
+                with coef_col:
+                    st.write('Коэффициенты модели:')
+                    coef = pd.DataFrame([data['coef']]).T
+                    coef = coef.rename(columns={0: 'value'})
+                    st.write(coef)
+                
+                st.write('Кривая обучения:')
+                loss_list = data['loss_list']
+                plt.figure(figsize=(18, 6))
+                plt.plot(np.arange(len(loss_list)), loss_list)
+                plt.xlabel("Time in epochs")
+                plt.ylabel("Loss")
+                st.pyplot(plt)
+
             else:
                 st.write(response.json()['detail'])
+    
+    with st.expander('Сравнение моделей'):
+        response = httpx.get("http://0.0.0.0:8000/list_models_for_comparison",
+                            timeout=1000000
+                            )
+        model_list = response.json()['models']
+
+        model_1, model_2 = st.columns(2)
+        models_data_1 = None
+        models_data_2 = None
+
+        with model_1:
+            model_name_1 = st.selectbox('Выберите модель 1:',
+                                        model_list, key='model_1'
+                                        )
+
+        with model_2:
+            model_name_2 = st.selectbox('Выберите модель 2:',
+                                        model_list, key='model_2'
+                                        )
+        if model_name_1:
+            response_1 = httpx.post("http://0.0.0.0:8000/compare_models",
+                                        data={'model_name': model_name_1},
+                                        timeout=1000000
+                                        )
+            models_data_1 = response_1.json()
+
+        if model_name_2:
+            response_2 = httpx.post("http://0.0.0.0:8000/compare_models",
+                                        data={'model_name': model_name_2},
+                                        timeout=1000000
+                                        )
+            models_data_2 = response_2.json()
+
+        if models_data_1 and models_data_2:
+            if model_name_1 == model_name_2:
+                st.write('Модели должны быть разными')
+            else:
+                st.write('Гиперпараметры моделей:')
+                params = pd.DataFrame({'alpha': [models_data_1['models_data']['alpha'],
+                                                models_data_2['models_data']['alpha']
+                                                ],
+                                    'l1_ratio': [models_data_1['models_data']['l1_ratio'],
+                                                models_data_2['models_data']['l1_ratio']
+                                                ],
+                                    'max_iter': [models_data_1['models_data']['max_iter'],
+                                                models_data_2['models_data']['max_iter']
+                                                ],
+                                    'tol': [models_data_1['models_data']['tol'],
+                                            models_data_2['models_data']['tol']
+                                            ],
+                                    'eta0': [models_data_1['models_data']['eta0'],
+                                            models_data_2['models_data']['eta0']
+                                            ]
+                                            }
+                                    ).T
+                params = params.rename(columns={0: model_name_1, 1: model_name_2})
+                st.write(params)
+
+                st.write('Качество моделей:')
+                metrics = pd.DataFrame({'r2': [models_data_1['models_data']['r2'],
+                                            models_data_2['models_data']['r2']
+                                            ],
+                                        'MSE': [models_data_1['models_data']['MSE'],
+                                                models_data_2['models_data']['MSE']
+                                                ],
+                                        'RMSE': [models_data_1['models_data']['RMSE'],
+                                                models_data_2['models_data']['RMSE']
+                                                ]
+                                                }
+                                        ).T
+                metrics = metrics.rename(columns={0: model_name_1, 1: model_name_2})
+                st.write(metrics)
+
+                st.write('Коэффициенты моделей:')
+                coef = pd.DataFrame([models_data_1['models_data']['coef'],
+                                    models_data_2['models_data']['coef']
+                                    ]
+                                    ).T
+                coef = coef.rename(columns={0: model_name_1, 1: model_name_2})
+                st.write(coef)
+
+                st.write('Кривая обучения:')
+                loss_list_1 = models_data_1['models_data']['loss_list']
+                loss_list_2 = models_data_2['models_data']['loss_list']
+                fig = go.Figure()
+
+                fig.add_trace(go.Scatter(x=np.arange(len(loss_list_1)), y=loss_list_1,
+                                        mode='lines+markers', name=model_name_1,
+                                        line=dict(color='blue')))
+
+                fig.add_trace(go.Scatter(x=np.arange(len(loss_list_2)), y=loss_list_2,
+                                        mode='lines+markers', name=model_name_2,
+                                        line=dict(color='red')))
+
+
+                fig.update_layout(title="Model Loss Over Epochs",
+                                xaxis_title="Epochs",
+                                yaxis_title="Loss",
+                                xaxis=dict(showgrid=True),
+                                yaxis=dict(showgrid=True))  
+
+                st.plotly_chart(fig)
 
 if file_predict is not None:
     df_predict = pd.read_csv(file_predict)

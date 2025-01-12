@@ -1,6 +1,7 @@
 from http import HTTPStatus
 import os
 from io import StringIO
+import sys
 import logging
 from logging.handlers import RotatingFileHandler
 from typing import Dict, List, Union, Any
@@ -10,10 +11,14 @@ from pydantic import BaseModel, RootModel
 import joblib
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score
+from sklearn.metrics import mean_squared_error as MSE
+from sklearn.metrics import root_mean_squared_error as RMSE
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import SGDRegressor
-# import uvicorn
+import uvicorn
 
 
 app = FastAPI()
@@ -27,6 +32,10 @@ class ApiResponse(BaseModel):
 
 class ModelListResponseBase(BaseModel):
     models: List[Any]
+
+
+class ModelListCompare(BaseModel):
+    models_data: Dict
 
 
 class ModelListResponse(RootModel[List[ModelListResponseBase]]):
@@ -43,11 +52,35 @@ class ApiResponseForecast(BaseModel):
     data: Dict[str, Any]
 
 
+class ApiResponseTrained(BaseModel):
+    message: str
+    data: Dict[str, Any]
+
+
 def delete_file(file_path: str):
     '''
     Remove file
     '''
     os.remove(file_path)
+
+def get_loss_list(model, X, y):
+    # Обучаем SGDRegressor
+    # Для отслеживания функции потерь на каждой итерации воспользуемся методом verbose
+    old_stdout = sys.stdout
+    sys.stdout = mystdout = StringIO()
+
+    model.fit(X, y)
+
+    sys.stdout = old_stdout
+    loss_history = mystdout.getvalue()
+
+    loss_list = []
+    for line in loss_history.split('\n'):
+        if(len(line.split("loss: ")) == 1):
+            continue
+        loss_list.append(float(line.split("loss: ")[-1]))
+
+    return loss_list
 
 def setup_logging() -> None:
     '''
@@ -86,11 +119,25 @@ def log(level: str, message: str, *args) -> None:
 setup_logging()
 
 
-@app.post("/fit", response_model=ApiResponse, status_code=HTTPStatus.CREATED)
-async def fit(file: UploadFile = File(...), model_name: str = Form(...)):
+@app.post("/fit", status_code=HTTPStatus.CREATED)
+async def fit(file: UploadFile = File(...), model_name: str = Form(...),
+              alpha: Union[float, None] = Form(...),
+              l1_ratio: Union[float, None] = Form(...),
+              max_iter: Union[float, None] = Form(...),
+              tol: Union[float, None] = Form(...),
+              eta0: Union[float, None] = Form(...)
+              ):
     '''
     Training model
     '''
+
+    alpha = alpha if alpha != -1 else 0.0001
+    l1_ratio = l1_ratio if l1_ratio != -1 else 0.15
+    max_iter = max_iter if max_iter != -1 else 1000
+    tol = tol if tol != -1 else 0.001
+    eta0 = eta0 if eta0 != -1 else 0.01
+    log('info', 'alpha = {}, l1_ratio = {}, max_iter = {}, tol = {},'
+        ' eta0 = {}', alpha, l1_ratio, max_iter, tol, eta0)
 
     log('info', 'Reading file')
     contents = await file.read()
@@ -110,8 +157,38 @@ async def fit(file: UploadFile = File(...), model_name: str = Form(...)):
                             'но еще не загружена'
                             )
     
+    if not 0 <= l1_ratio <= 1:
+        log('error', 'l1_ratio={}, not in range[0;1]', l1_ratio)
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN,
+                            detail='l1_ratio должен быть в диапазоне [0;1]'
+                            )
+
+    if alpha < 0:
+        log('error', 'alpha={}, less than 0', alpha)
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN,
+                            detail='alpha должен быть больше 0'
+                            )
+    
+    if not 1 <= max_iter <= 100000:
+        log('error', 'max_iter={}, less than 0', alpha)
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN,
+                            detail='max_iter должен быть в диапазоне [1;100000]'
+                            )
+    
+    if not 0 <= max_iter <= 100000:
+        log('error', 'tol={}, less than 0', alpha)
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN,
+                            detail='tol должен быть в диапазоне [0;100000]'
+                            )
+    
+    if not 0 <= eta0 <= 100000:
+        log('error', 'eta0={}, less than 0', alpha)
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN,
+                            detail='eta0 должен быть в диапазоне [0;100000]'
+                            )
+
     models[model_name] = {'scaler': StandardScaler(),
-                          'regressor': SGDRegressor()
+                          'regressor': SGDRegressor(alpha=alpha, l1_ratio=l1_ratio, verbose=1, max_iter=max_iter, tol=tol, eta0=eta0)
                           }
     
     df = pd.read_csv(StringIO(contents.decode('utf-8')))
@@ -128,7 +205,7 @@ async def fit(file: UploadFile = File(...), model_name: str = Form(...)):
                                                         )
     log('info', 'Dataset split at train and test')
 
-    log('info', 'Filling np.nan')
+    log('info', 'Filling np.nan for train data')
     for column in train_x.columns:
         if not train_x[column].isna().all():
             median_value = train_x[column].median()
@@ -136,7 +213,17 @@ async def fit(file: UploadFile = File(...), model_name: str = Form(...)):
             median_value = 0
 
         train_x[column] = train_x[column].fillna(median_value)
-    log('info', 'np.nan filled')
+    log('info', 'np.nan filled for train data')
+
+    log('info', 'Filling np.nan for test data')
+    for column in test_x.columns:
+        if not test_x[column].isna().all():
+            median_value = test_x[column].median()
+        else:
+            median_value = 0
+
+        test_x[column] = test_x[column].fillna(median_value)
+    log('info', 'np.nan filled for test data')
 
     log('info', 'Scaling train_x')
     train_x = pd.DataFrame(models[model_name]['scaler'].fit_transform(train_x),
@@ -144,18 +231,62 @@ async def fit(file: UploadFile = File(...), model_name: str = Form(...)):
                            )
     log('info', 'Train_x scaled')
 
+    log('info', 'Scaling test_x')
+    test_x = pd.DataFrame(models[model_name]['scaler'].transform(test_x),
+                           columns=test_x.columns
+                           )
+    log('info', 'Test_x scaled')
+
     train_y = np.array(train_y.fillna(0)).ravel()
+    test_y = np.array(test_y.fillna(0)).ravel()
 
     log('info', 'Training model')
     model = models[model_name]['regressor']
-    model.partial_fit(train_x, train_y)
+    loss_list = get_loss_list(model, train_x, train_y)
     log('info', 'Model trained')
+
+    log('info', 'Predicting AQI')
+    pred = model.predict(test_x)
+    log('info', 'AQI predicted')
+
+    log('info', 'Calculating metrics')
+    r2 = round(r2_score(test_y, pred),4)
+    mse = round(MSE(test_y, pred), 4)
+    rmse = round(RMSE(test_y, pred),4)
+    coef = [round(coef, 4) for coef in model.coef_]
+
+    log('info', 'Model: {}\nr2: {}\nMSE: {}\nRMSE: {}\ncoef: {}\n',
+                 model_name, r2, mse, rmse,
+                 dict(zip(test_x.columns, coef))
+                 )
+    log('info', 'Metrics calculated for model {}', model_name)
 
     log('info', 'Saving model')
     joblib.dump(models[model_name]['regressor'], f'models/{model_name}.pickle')
     log('info', 'Model saved')
 
-    return ApiResponse(message="Model trained successfully", success=True)
+    coef_dict = {}
+    coef_dict['intercept'] = round(float(model.intercept_), 4)
+    for i in range(len(test_x.columns)):
+        coef_dict[test_x.columns[i]] = coef[i]
+
+    message_text = f"Модель {model_name} обучена"
+    data = {
+        'alpha': alpha,
+        'l1_ratio': l1_ratio,
+        'max_iter': max_iter,
+        'tol': tol,
+        'eta0': eta0,
+        'r2': r2,
+        'MSE': mse, 
+        'RMSE': rmse,
+        'coef': coef_dict,
+        'loss_list': loss_list
+    }
+
+    models[model_name]['data'] = data
+
+    return ApiResponseBase(message=message_text, data=data)
 
 
 @app.get("/load_main", response_model=ApiResponse)
@@ -286,6 +417,26 @@ async def list_models():
     return ModelListResponseBase(models=[model for model in models])
 
 
+@app.get("/list_models_for_comparison", response_model=ModelListResponseBase)
+async def list_models():
+    '''
+    Showing models for comparison
+    '''
+
+    log('info', 'Showing models for comparison')
+
+    models_list = []
+
+    for model_name in models:
+        try:
+            data = models[model_name]['data']
+            models_list.append(model_name)
+        except Exception:
+            continue
+
+    return ModelListResponseBase(models=models_list)
+
+
 @app.get("/list_models_not_loaded", response_model=ModelListResponseBase)
 async def list_models_not_loaded():
     '''
@@ -328,5 +479,15 @@ async def remove_all():
 
     return ApiResponse(message="Models were removed", success=True)
 
-# if __name__ == "__main__":
-# uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
+@app.post("/compare_models", response_model=ModelListCompare)
+async def compare_models(model_name: str = Form(...)):
+    '''
+    Showing data for selected models
+    '''
+    log('info', 'Showing data for selected models')
+    model_data = models[model_name]['data']
+    return ModelListCompare(models_data=model_data)
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
