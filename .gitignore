@@ -8,3 +8,9 @@ __pycache__/
 *.mp4
 .DS_Store
 files
+
+# virtual python environment
+myenv/
+
+# logs folder
+logs/
