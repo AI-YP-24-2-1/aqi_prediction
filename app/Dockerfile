@@ -1,8 +1,10 @@
 FROM python:3.13
 WORKDIR /app
 COPY requirements.txt .
-COPY models/ .
-COPY logs/ .
+COPY resources/ .
+COPY results/ .
+# COPY logs/ .
+COPY api/ .
 COPY main.py .
 COPY app.py .
 RUN pip install --no-cache-dir -r requirements.txt
