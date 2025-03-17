@@ -3,13 +3,12 @@ version: "3.13"
 services:
   app:
     build: 
-      context: ./app
+      context: ./src/app
       dockerfile: Dockerfile
     volumes:
-      - ./app:/app
+      - ./src/app:/app
     ports:
       - "8000:8000"  # FastAPI
       - "8501:8501"  # Streamlit
     environment:
       - PYTHONUNBUFFERED=1
-

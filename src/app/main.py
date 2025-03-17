@@ -4,14 +4,12 @@ from io import StringIO
 import sys
 import logging
 from logging.handlers import RotatingFileHandler
-from typing import Dict, List, Union, Any
+from typing import Union
 from fastapi import FastAPI, UploadFile, Form, File, HTTPException
 from fastapi import responses, BackgroundTasks
-from pydantic import BaseModel, RootModel
 import joblib
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_squared_error as MSE
@@ -19,42 +17,12 @@ from sklearn.metrics import root_mean_squared_error as RMSE
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import SGDRegressor
 import uvicorn
+from api.models import ApiResponse, ModelListResponse, CompareModelsResponse, ApiDataResponse
+from constants import MODELS_SOURCE_DIR
 
 
 app = FastAPI()
 models = {}
-
-
-class ApiResponse(BaseModel):
-    message: str
-    success: bool
-
-
-class ModelListResponseBase(BaseModel):
-    models: List[Any]
-
-
-class ModelListCompare(BaseModel):
-    models_data: Dict
-
-
-class ModelListResponse(RootModel[List[ModelListResponseBase]]):
-    pass
-
-
-class ApiResponseBase(BaseModel):
-    message: str
-    data: Union[Dict, None] = None
-
-
-class ApiResponseForecast(BaseModel):
-    message: str
-    data: Dict[str, Any]
-
-
-class ApiResponseTrained(BaseModel):
-    message: str
-    data: Dict[str, Any]
 
 
 def delete_file(file_path: str):
@@ -142,7 +110,7 @@ async def fit(file: UploadFile = File(...), model_name: str = Form(...),
     log('info', 'Reading file')
     contents = await file.read()
     log('info', 'File read')
-    files = [model[:-7] for model in os.listdir('models/')]
+    files = [model[:-7] for model in os.listdir(MODELS_SOURCE_DIR)]
 
     if model_name in models:
         log('error', 'Model {} already exists', model_name)
@@ -262,7 +230,7 @@ async def fit(file: UploadFile = File(...), model_name: str = Form(...),
     log('info', 'Metrics calculated for model {}', model_name)
 
     log('info', 'Saving model')
-    joblib.dump(models[model_name]['regressor'], f'models/{model_name}.pickle')
+    joblib.dump(models[model_name]['regressor'], f'{MODELS_SOURCE_DIR}{model_name}.pickle')
     log('info', 'Model saved')
 
     coef_dict = {}
@@ -286,7 +254,7 @@ async def fit(file: UploadFile = File(...), model_name: str = Form(...),
 
     models[model_name]['data'] = data
 
-    return ApiResponseBase(message=message_text, data=data)
+    return ApiDataResponse(message=message_text, data=data)
 
 
 @app.get("/load_main", response_model=ApiResponse)
@@ -300,7 +268,7 @@ async def load_main():
     if model_name not in models:
         try:
             log('info', 'Loading main model')
-            model_pickle = joblib.load(f'models/{model_name}.pickle')
+            model_pickle = joblib.load(f'{MODELS_SOURCE_DIR}{model_name}.pickle')
             models[model_name] = {'scaler': StandardScaler(),
                                   'regressor': model_pickle
                                   }
@@ -323,7 +291,7 @@ async def load(model_name: str = Form(...)):
     if model_name not in models:
         try:
             log('info', 'Loading {} model', model_name)
-            model_pickle = joblib.load(f'models/{model_name}.pickle')
+            model_pickle = joblib.load(f'{MODELS_SOURCE_DIR}{model_name}.pickle')
             models[model_name] = {'scaler': StandardScaler(),
                                   'regressor': model_pickle
                                   }
@@ -388,14 +356,14 @@ async def predict(background_tasks: BackgroundTasks,
         df['european_aqi_prediction'] = pred.tolist()
 
         log('info', 'Saving prediction')
-        df.to_csv(f'models/{model_name}_prediction.csv', index=False)
+        df.to_csv(f'{MODELS_SOURCE_DIR}{model_name}_prediction.csv', index=False)
         log('info', 'Prediction saved')
 
         background_tasks.add_task(delete_file,
-                                  f'models/{model_name}_prediction.csv'
+                                  f'{MODELS_SOURCE_DIR}{model_name}_prediction.csv'
                                   )
 
-        return responses.FileResponse(f'models/{model_name}_prediction.csv',
+        return responses.FileResponse(f'{MODELS_SOURCE_DIR}{model_name}_prediction.csv',
                                       media_type='text/csv',
                                       filename=f'{model_name}_prediction.csv'
                                       )
@@ -406,7 +374,7 @@ async def predict(background_tasks: BackgroundTasks,
                             )
 
 
-@app.get("/list_models", response_model=ModelListResponseBase)
+@app.get("/list_models", response_model=ModelListResponse)
 async def list_models():
     '''
     Showing loaded models
@@ -414,10 +382,10 @@ async def list_models():
 
     log('info', 'Showing loaded models')
 
-    return ModelListResponseBase(models=[model for model in models])
+    return ModelListResponse(models=[model for model in models])
 
 
-@app.get("/list_models_for_comparison", response_model=ModelListResponseBase)
+@app.get("/list_models_for_comparison", response_model=ModelListResponse)
 async def list_models():
     '''
     Showing models for comparison
@@ -434,10 +402,10 @@ async def list_models():
         except Exception:
             continue
 
-    return ModelListResponseBase(models=models_list)
+    return ModelListResponse(models=models_list)
 
 
-@app.get("/list_models_not_loaded", response_model=ModelListResponseBase)
+@app.get("/list_models_not_loaded", response_model=ModelListResponse)
 async def list_models_not_loaded():
     '''
     Showing not loaded models
@@ -453,7 +421,7 @@ async def list_models_not_loaded():
             model = model.replace('.pickle', '')
             models_list.append(model)
 
-    return ModelListResponseBase(models=models_list)
+    return ModelListResponse(models=models_list)
 
 
 @app.delete("/remove_all", response_model=ApiResponse)
@@ -472,7 +440,7 @@ async def remove_all():
     for model_name in models_list:
         try:
             if model_name != 'aqi_model':
-                os.remove(f'models/{model_name}.pickle')
+                os.remove(f'{MODELS_SOURCE_DIR}{model_name}.pickle')
             del models[model_name]
         except Exception:
             continue
@@ -480,14 +448,14 @@ async def remove_all():
     return ApiResponse(message="Models were removed", success=True)
 
 
-@app.post("/compare_models", response_model=ModelListCompare)
+@app.post("/compare_models", response_model=CompareModelsResponse)
 async def compare_models(model_name: str = Form(...)):
     '''
     Showing data for selected models
     '''
     log('info', 'Showing data for selected models')
     model_data = models[model_name]['data']
-    return ModelListCompare(models_data=model_data)
+    return CompareModelsResponse(models_data=model_data)
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
