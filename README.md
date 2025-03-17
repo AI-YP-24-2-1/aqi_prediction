@@ -1,6 +1,6 @@
 # Прогнозирование индекса качества воздуха (AQI)
 
-[Checkpoints](https://github.com/AI-YP-24-2-1/.github/blob/ec9d5c8a6b688b46a8932b9a04f43ac2c3a6873c/checkpoints.md)
+[Checkpoints](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/docs/checkpoints.md)
 
 ## Описание проекта
 В рамках проекта будет реализована модель прогнозирования индекса качества воздуха и загрязнителей его составляющих<br>
