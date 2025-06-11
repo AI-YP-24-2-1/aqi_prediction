@@ -6,3 +6,4 @@ year_project_venv/
 *.mp4
 files
 .DS_Store
+*.sqlite

@@ -13,3 +13,9 @@ uvicorn==0.34.0
 python-multipart==0.0.20
 watchdog==6.0.0
 plotly==5.24.1
+flaml
+xgboost
+lightgbm
+catboost
+torch
+torchvision

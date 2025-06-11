@@ -14,15 +14,105 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_squared_error as MSE
 from sklearn.metrics import root_mean_squared_error as RMSE
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.linear_model import SGDRegressor
+import torch
+from flaml import AutoML
 import uvicorn
 from api.models import ApiResponse, ModelListResponse, CompareModelsResponse, ApiDataResponse
 from constants import MODELS_SOURCE_DIR
+from torch import nn
+from neural_network import NeuralNet
 
 
 app = FastAPI()
 models = {}
+
+
+def prepare_train_data(df, model_name):
+    log('info', 'filling np.nan')
+    df['snow_depth'] = df['snow_depth'].fillna(0)
+
+    wind_median = df.groupby(['region', 'year', 'month'])['snow_depth'].transform('median')
+    df['wind_speed_10m'] = df['snow_depth'].fillna(wind_median)
+
+    median_income_by_region_year = df.groupby(['region', 'year'])['income'].median().reset_index().rename(columns={'income': 'median_income'})
+    df = df.merge(median_income_by_region_year, on=['region', 'year'], how='left')
+    df['income'] = df['income'].fillna(df['median_income'])
+    df = df.drop(columns=['median_income'])
+
+    median_monoxide_by_region_year = df.groupby(['region', 'year'])['nitrogen_monoxide'].median().reset_index().rename(columns={'nitrogen_monoxide': 'nitrogen_monoxide_median'})
+    df = df.merge(median_monoxide_by_region_year, on=['region', 'year'], how='left')
+    df['nitrogen_monoxide'] = df['nitrogen_monoxide'].fillna(df['nitrogen_monoxide_median'])
+    df = df.drop(columns=['nitrogen_monoxide_median'])
+    log('info', 'np.nan filled')
+
+    log('info', 'transforming categorical data')
+    for col in df.select_dtypes(include=['object']).columns:
+        le = LabelEncoder()
+        df[col] = le.fit_transform(df[col])
+    
+    df = df.dropna().reset_index(drop=True)
+
+    log('info', 'categorical data transformed')
+
+    log('info', 'Splitting at x and y')
+    X_aqi = df.drop(['european_aqi'], axis=1)
+    Y_aqi = df['european_aqi']
+    log('info', 'Dataset split at x and y')
+
+    log('info', 'Splitting dataset and train and test')
+    train_x, test_x, train_y, test_y = train_test_split(X_aqi, Y_aqi,
+                                                        test_size=0.25,
+                                                        random_state=42
+                                                        )
+    log('info', 'Dataset split at train and test')
+
+    log('info', 'Scaling train_x')
+    train_x = pd.DataFrame(models[model_name]['scaler'].fit_transform(train_x),
+                           columns=train_x.columns
+                           )
+    log('info', 'Train_x scaled')
+
+    log('info', 'Scaling test_x')
+    test_x = pd.DataFrame(models[model_name]['scaler'].transform(test_x),
+                           columns=test_x.columns
+                           )
+    log('info', 'Test_x scaled')
+
+    train_y = np.array(train_y.fillna(0)).ravel()
+    test_y = np.array(test_y.fillna(0)).ravel()
+
+    return train_x, train_y, test_x, test_y
+
+def prepare_predict_data(df):
+    log('info', 'filling np.nan')
+    df['snow_depth'] = df['snow_depth'].fillna(0)
+
+    wind_median = df.groupby(['region', 'year', 'month'])['snow_depth'].transform('median')
+    df['wind_speed_10m'] = df['snow_depth'].fillna(wind_median)
+
+    median_income_by_region_year = df.groupby(['region', 'year'])['income'].median().reset_index().rename(columns={'income': 'median_income'})
+    df = df.merge(median_income_by_region_year, on=['region', 'year'], how='left')
+    df['income'] = df['income'].fillna(df['median_income'])
+    df = df.drop(columns=['median_income'])
+
+    median_monoxide_by_region_year = df.groupby(['region', 'year'])['nitrogen_monoxide'].median().reset_index().rename(columns={'nitrogen_monoxide': 'nitrogen_monoxide_median'})
+    df = df.merge(median_monoxide_by_region_year, on=['region', 'year'], how='left')
+    df['nitrogen_monoxide'] = df['nitrogen_monoxide'].fillna(df['nitrogen_monoxide_median'])
+    df = df.drop(columns=['nitrogen_monoxide_median'])
+    log('info', 'np.nan filled')
+
+    log('info', 'transforming categorical data')
+    for col in df.select_dtypes(include=['object']).columns:
+        le = LabelEncoder()
+        df[col] = le.fit_transform(df[col])
+    
+    df = df.dropna().reset_index(drop=True)
+
+    log('info', 'categorical data transformed')
+
+    return df
 
 
 def delete_file(file_path: str):
@@ -31,7 +121,7 @@ def delete_file(file_path: str):
     '''
     os.remove(file_path)
 
-def get_loss_list(model, X, y):
+def train_sgd(model, X, y):
     # Обучаем SGDRegressor
     # Для отслеживания функции потерь на каждой итерации воспользуемся методом verbose
     old_stdout = sys.stdout
@@ -87,7 +177,102 @@ def log(level: str, message: str, *args) -> None:
 setup_logging()
 
 
-@app.post("/fit", status_code=HTTPStatus.CREATED)
+#@app.get("/load_main", response_model=ApiResponse)
+#async def load_main():
+#    '''
+#    Loading main model
+#    '''
+#
+#    model_name = 'aqi_model'
+#
+#    if model_name not in models:
+#        try:
+#            log('info', 'Loading main model')
+#            model_pickle = joblib.load(f'{MODELS_SOURCE_DIR}{model_name}.pickle')
+#            models[model_name] = {'scaler': StandardScaler(),
+#                                  'regressor': model_pickle
+#                                  }
+#            log('info', 'Main model loaded')
+#        except Exception:
+#            log('error', 'Model not found')
+#            raise HTTPException(status_code=HTTPStatus.NOT_FOUND,
+#                                detail="Модель не найдена"
+#                                )
+#
+#    return ApiResponse(message=f"Model {model_name} loaded", success=True)
+
+
+@app.post("/load", response_model=ApiResponse)
+async def load(model_name: str = Form(...)):
+    '''
+    Loading selected model
+    '''
+
+    if model_name not in models:
+        try:
+            log('info', 'Loading {} model', model_name)
+
+            if model_name[model_name.rfind('.')+1:] == 'pth':
+                model = NeuralNet(23, 2048)
+                model.load_state_dict(torch.load(f'{MODELS_SOURCE_DIR}{model_name}', map_location=torch.device('cpu')))
+            else:
+                model = joblib.load(f'{MODELS_SOURCE_DIR}{model_name}')
+
+            models[model_name] = {'scaler': StandardScaler(),
+                                  'regressor': model
+                                  }
+            log('info', 'Model {} loaded', model_name)
+        except Exception:
+            log('info', 'Model {} not found', model_name)
+            raise HTTPException(status_code=HTTPStatus.NOT_FOUND,
+                                detail="Модель не найдена"
+                                )
+
+    return ApiResponse(message=f"Model {model_name} loaded", success=True)
+
+
+@app.get("/list_models", response_model=ModelListResponse)
+async def list_models():
+    '''
+    Showing loaded models
+    '''
+
+    log('info', 'Showing loaded models')
+
+    return ModelListResponse(models=[model for model in models])
+
+
+@app.get("/list_models_not_loaded", response_model=ModelListResponse)
+async def list_models_not_loaded():
+    '''
+    Showing not loaded models
+    '''
+    
+    log('info', 'Showing not loaded models')
+    models_list = [model for model in os.listdir('models') if model not in models]
+
+    return ModelListResponse(models=models_list)
+
+
+@app.delete("/remove_all", response_model=ApiResponse)
+async def remove_all():
+    '''
+    Removing all models
+    '''
+
+    log('info', 'Removing all models')
+    for model in os.listdir('models'):
+        try:
+            if model not in ['DL_model.pth', 'FLAML_model.pkl', 'SGD_model.pkl']:
+                os.remove(f'{MODELS_SOURCE_DIR}{model}')
+            del models[model]
+        except Exception:
+            continue
+
+    return ApiResponse(message="Models were removed", success=True)
+
+
+@app.post("/fit_sgd", status_code=HTTPStatus.CREATED)
 async def fit(file: UploadFile = File(...), model_name: str = Form(...),
               alpha: Union[float, None] = Form(...),
               l1_ratio: Union[float, None] = Form(...),
@@ -96,9 +281,10 @@ async def fit(file: UploadFile = File(...), model_name: str = Form(...),
               eta0: Union[float, None] = Form(...)
               ):
     '''
-    Training model
+    Training SGDRegressor model
     '''
 
+    model_name = 'SGD_' + model_name + '.pkl'
     alpha = alpha if alpha != -1 else 0.0001
     l1_ratio = l1_ratio if l1_ratio != -1 else 0.15
     max_iter = max_iter if max_iter != -1 else 1000
@@ -110,7 +296,7 @@ async def fit(file: UploadFile = File(...), model_name: str = Form(...),
     log('info', 'Reading file')
     contents = await file.read()
     log('info', 'File read')
-    files = [model[:-7] for model in os.listdir(MODELS_SOURCE_DIR)]
+    files = [model for model in os.listdir(MODELS_SOURCE_DIR)]
 
     if model_name in models:
         log('error', 'Model {} already exists', model_name)
@@ -161,56 +347,11 @@ async def fit(file: UploadFile = File(...), model_name: str = Form(...),
     
     df = pd.read_csv(StringIO(contents.decode('utf-8')))
 
-    log('info', 'Splitting at x and y')
-    X_aqi = df.drop(['european_aqi'], axis=1).select_dtypes(['float', 'int'])
-    Y_aqi = df['european_aqi']
-    log('info', 'Dataset split at x and y')
-
-    log('info', 'Splitting dataset and train and test')
-    train_x, test_x, train_y, test_y = train_test_split(X_aqi, Y_aqi,
-                                                        test_size=0.25,
-                                                        random_state=42
-                                                        )
-    log('info', 'Dataset split at train and test')
-
-    log('info', 'Filling np.nan for train data')
-    for column in train_x.columns:
-        if not train_x[column].isna().all():
-            median_value = train_x[column].median()
-        else:
-            median_value = 0
-
-        train_x[column] = train_x[column].fillna(median_value)
-    log('info', 'np.nan filled for train data')
-
-    log('info', 'Filling np.nan for test data')
-    for column in test_x.columns:
-        if not test_x[column].isna().all():
-            median_value = test_x[column].median()
-        else:
-            median_value = 0
-
-        test_x[column] = test_x[column].fillna(median_value)
-    log('info', 'np.nan filled for test data')
-
-    log('info', 'Scaling train_x')
-    train_x = pd.DataFrame(models[model_name]['scaler'].fit_transform(train_x),
-                           columns=train_x.columns
-                           )
-    log('info', 'Train_x scaled')
-
-    log('info', 'Scaling test_x')
-    test_x = pd.DataFrame(models[model_name]['scaler'].transform(test_x),
-                           columns=test_x.columns
-                           )
-    log('info', 'Test_x scaled')
-
-    train_y = np.array(train_y.fillna(0)).ravel()
-    test_y = np.array(test_y.fillna(0)).ravel()
+    train_x, train_y, test_x, test_y = prepare_train_data(df, model_name)
 
     log('info', 'Training model')
     model = models[model_name]['regressor']
-    loss_list = get_loss_list(model, train_x, train_y)
+    loss_list = train_sgd(model, train_x, train_y)
     log('info', 'Model trained')
 
     log('info', 'Predicting AQI')
@@ -230,7 +371,7 @@ async def fit(file: UploadFile = File(...), model_name: str = Form(...),
     log('info', 'Metrics calculated for model {}', model_name)
 
     log('info', 'Saving model')
-    joblib.dump(models[model_name]['regressor'], f'{MODELS_SOURCE_DIR}{model_name}.pickle')
+    joblib.dump(models[model_name]['regressor'], f'{MODELS_SOURCE_DIR}{model_name}')
     log('info', 'Model saved')
 
     coef_dict = {}
@@ -252,57 +393,95 @@ async def fit(file: UploadFile = File(...), model_name: str = Form(...),
         'loss_list': loss_list
     }
 
-    models[model_name]['data'] = data
+    models[f'{model_name}']['data'] = data
 
     return ApiDataResponse(message=message_text, data=data)
 
 
-@app.get("/load_main", response_model=ApiResponse)
-async def load_main():
+@app.post("/fit_flaml", status_code=HTTPStatus.CREATED)
+async def fit(file: UploadFile = File(...), model_name: str = Form(...),
+              time_budget: Union[float, None] = Form(...)
+              ):
     '''
-    Loading main model
-    '''
-
-    model_name = 'aqi_model'
-
-    if model_name not in models:
-        try:
-            log('info', 'Loading main model')
-            model_pickle = joblib.load(f'{MODELS_SOURCE_DIR}{model_name}.pickle')
-            models[model_name] = {'scaler': StandardScaler(),
-                                  'regressor': model_pickle
-                                  }
-            log('info', 'Main model loaded')
-        except Exception:
-            log('error', 'Model not found')
-            raise HTTPException(status_code=HTTPStatus.NOT_FOUND,
-                                detail="Модель не найдена"
-                                )
-
-    return ApiResponse(message=f"Model {model_name} loaded", success=True)
-
-
-@app.post("/load", response_model=ApiResponse)
-async def load(model_name: str = Form(...)):
-    '''
-    Loading selected model
+    Training FLAML model
     '''
 
-    if model_name not in models:
-        try:
-            log('info', 'Loading {} model', model_name)
-            model_pickle = joblib.load(f'{MODELS_SOURCE_DIR}{model_name}.pickle')
-            models[model_name] = {'scaler': StandardScaler(),
-                                  'regressor': model_pickle
-                                  }
-            log('info', 'Model {} loaded', model_name)
-        except Exception:
-            log('info', 'Model {} not found', model_name)
-            raise HTTPException(status_code=HTTPStatus.NOT_FOUND,
-                                detail="Модель не найдена"
-                                )
+    model_name = 'FLAML_' + model_name + '.pkl'
+    time_budget = 60 if time_budget == -1 else time_budget
+    log('info', 'time_budget: {}', time_budget)
 
-    return ApiResponse(message=f"Model {model_name} loaded", success=True)
+    log('info', 'Reading file')
+    contents = await file.read()
+    log('info', 'File read')
+    files = [model[:model.rfind('.')] for model in os.listdir(MODELS_SOURCE_DIR)]
+
+    if model_name in models:
+        log('error', 'Model {} already exists', model_name)
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN,
+                            detail="Модель с таким названием уже существует"
+                            )
+
+    if model_name in files:
+        log('error', 'Model {} already exists but not loaded', model_name)
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN,
+                            detail='Модель с таким названием уже существует, '
+                            'но еще не загружена'
+                            )
+    
+    if not 30 <= time_budget <= 600:
+        log('error', 'time_budget={}, not in range[30;600]', time_budget)
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN,
+                            detail='time_budget должен быть в диапазоне [30;600]'
+                            )
+
+    models[model_name] = {'scaler': StandardScaler(),
+                          'regressor': AutoML()
+                          }
+    
+    df = pd.read_csv(StringIO(contents.decode('utf-8')))
+
+    train_x, train_y, test_x, test_y = prepare_train_data(df, model_name)
+
+    log('info', 'Training model')
+    model = models[model_name]['regressor']
+    model.fit(
+    train_x, train_y,
+    task='regression',
+    time_budget=time_budget,
+    metric='mse',
+    estimator_list=['lgbm', 'xgboost', 'catboost'],
+    n_jobs=-1
+    )
+    log('info', 'Model trained')
+
+    log('info', 'Predicting AQI')
+    pred = model.predict(test_x)
+    log('info', 'AQI predicted')
+
+    log('info', 'Calculating metrics')
+    r2 = round(r2_score(test_y, pred),4)
+    mse = round(MSE(test_y, pred), 4)
+    rmse = round(RMSE(test_y, pred),4)
+
+    log('info', 'Model: {}\nr2: {}\nMSE: {}\nRMSE: {}\n',
+                 model_name, r2, mse, rmse
+                 )
+    log('info', 'Metrics calculated for model {}', model_name)
+
+    log('info', 'Saving model')
+    joblib.dump(models[model_name]['regressor'], f'{MODELS_SOURCE_DIR}{model_name}')
+    log('info', 'Model saved')
+
+    message_text = f"Модель {model_name} обучена"
+    data = {'time_budget': time_budget,
+            'r2': r2,
+            'MSE': mse, 
+            'RMSE': rmse
+            }
+
+    models[f'{model_name}']['data'] = data
+
+    return ApiDataResponse(message=message_text, data=data)
 
 
 @app.post("/predict", status_code=HTTPStatus.CREATED)
@@ -315,24 +494,27 @@ async def predict(background_tasks: BackgroundTasks,
 
     log('info', 'Reading file')
     contents = await file.read()
+    df = pd.read_csv(StringIO(contents.decode('utf-8')))
     log('info', 'File read')
 
-    log('info', 'Selecting numeric columns')
-    df = pd.read_csv(StringIO(contents.decode('utf-8')))
-    x = pd.DataFrame(df).select_dtypes(['float', 'int'])
-    log('info', 'Numeric columns selected')
+    #log('info', 'Selecting numeric columns')
+    #df = pd.read_csv(StringIO(contents.decode('utf-8')))
+    #x = pd.DataFrame(df).select_dtypes(['float', 'int'])
+    #log('info', 'Numeric columns selected')
 
-    log('info', 'Filling np.nan')
-    for column in x.columns:
-        median_value = x[column].median() if not x[column].isna().all() else 0
-        x[column] = x[column].fillna(median_value)
-    log('info', 'np.nan filled')
+    #log('info', 'Filling np.nan')
+    #for column in x.columns:
+    #    median_value = x[column].median() if not x[column].isna().all() else 0
+    #    x[column] = x[column].fillna(median_value)
+    #log('info', 'np.nan filled')
 
-    log('info', 'Scaling data')
-    x = pd.DataFrame(models[model_name]['scaler'].fit_transform(x),
-                     columns=x.columns
-                     )
-    log('info', 'Data scaled')
+    #log('info', 'Scaling data')
+    #x = pd.DataFrame(models[model_name]['scaler'].fit_transform(x),
+    #                 columns=x.columns
+    #                 )
+    #log('info', 'Data scaled')
+
+    x = prepare_predict_data(df)
 
     if model_name not in models:
         log('error', 'Model {} not loaded', model_name)
@@ -348,8 +530,21 @@ async def predict(background_tasks: BackgroundTasks,
 
     try:
         log('info', 'Predicting AQI with {} model', model_name)
+        extention = model_name[model_name.rfind('.')+1:]
         model = models[model_name]['regressor']
-        pred = model.predict(x)
+
+        if extention == 'pkl':
+            pred = model.predict(x)
+        elif extention == 'pth':
+            x = x.values.astype(np.float32)
+            x_tensor = torch.from_numpy(x)
+
+            model.eval()
+
+            with torch.no_grad():
+                pred_tensor = model(x_tensor)
+                pred = pred_tensor.numpy()
+
         log('info', 'AQI predicted')
 
         df = pd.DataFrame(df)
@@ -374,17 +569,6 @@ async def predict(background_tasks: BackgroundTasks,
                             )
 
 
-@app.get("/list_models", response_model=ModelListResponse)
-async def list_models():
-    '''
-    Showing loaded models
-    '''
-
-    log('info', 'Showing loaded models')
-
-    return ModelListResponse(models=[model for model in models])
-
-
 @app.get("/list_models_for_comparison", response_model=ModelListResponse)
 async def list_models():
     '''
@@ -396,56 +580,13 @@ async def list_models():
     models_list = []
 
     for model_name in models:
-        try:
-            data = models[model_name]['data']
-            models_list.append(model_name)
-        except Exception:
-            continue
+        if model_name not in ['DL_model.pth', 'FLAML_model.pkl', 'SGD_model.pkl']:
+            try:
+                models_list.append(model_name)
+            except Exception:
+                continue
 
     return ModelListResponse(models=models_list)
-
-
-@app.get("/list_models_not_loaded", response_model=ModelListResponse)
-async def list_models_not_loaded():
-    '''
-    Showing not loaded models
-    '''
-
-    models_list = []
-    
-    log('info', 'Showing not loaded models')
-    for model in os.listdir('models'):
-        if (model.replace('.pickle', '') not in models and
-                model[-6:] == 'pickle'):
-
-            model = model.replace('.pickle', '')
-            models_list.append(model)
-
-    return ModelListResponse(models=models_list)
-
-
-@app.delete("/remove_all", response_model=ApiResponse)
-async def remove_all():
-    '''
-    Removing all models
-    '''
-
-    log('info', 'Removing all models')
-    models_list = []
-    for model in os.listdir('models'):
-        if model[-6:] == 'pickle':
-            model = model.replace('.pickle', '')
-            models_list.append(model)
-
-    for model_name in models_list:
-        try:
-            if model_name != 'aqi_model':
-                os.remove(f'{MODELS_SOURCE_DIR}{model_name}.pickle')
-            del models[model_name]
-        except Exception:
-            continue
-
-    return ApiResponse(message="Models were removed", success=True)
 
 
 @app.post("/compare_models", response_model=CompareModelsResponse)
@@ -454,7 +595,12 @@ async def compare_models(model_name: str = Form(...)):
     Showing data for selected models
     '''
     log('info', 'Showing data for selected models')
-    model_data = models[model_name]['data']
+
+    if model_name:
+        model_data = models[model_name]['data']
+    else:
+        model_data = []
+
     return CompareModelsResponse(models_data=model_data)
 
 if __name__ == "__main__":
