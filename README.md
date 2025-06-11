@@ -30,7 +30,7 @@
 * Aiogram 3.x
 
 ## Структура проекта
-![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/project_structure.png?raw=true)
+![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/1.project_structure.png?raw=true)
 
 ## Деплой проекта
 Для запуска Streamlit сервиса с Fastapi необходимо:
