@@ -85,7 +85,7 @@ def prepare_train_data(df, model_name):
 
     return train_x, train_y, test_x, test_y
 
-def prepare_predict_data(df):
+def prepare_predict_data(df, model_name):
     log('info', 'filling np.nan')
     df['snow_depth'] = df['snow_depth'].fillna(0)
 
@@ -104,14 +104,19 @@ def prepare_predict_data(df):
     log('info', 'np.nan filled')
 
     log('info', 'transforming categorical data')
-    label_encoders = joblib.load(f'{INFERENCE_SOURCE_DIR}dl_model_encoder.pkl')
+    if model_name[model_name.rfind('.')+1:] == 'pth':
+        label_encoders = joblib.load(f'{INFERENCE_SOURCE_DIR}dl_model_encoder.pkl')
 
-    for col in df.select_dtypes(include=['object']).columns:
-        if col in label_encoders:
-            df[col] = label_encoders[col].transform(df[col])
-        else:
-            df = df.drop(columns=[col])
-    
+        for col in df.select_dtypes(include=['object']).columns:
+            if col in label_encoders:
+                df[col] = label_encoders[col].transform(df[col])
+            else:
+                df = df.drop(columns=[col])
+    else:
+        for col in df.select_dtypes(include=['object']).columns:
+            le = LabelEncoder()
+            df[col] = le.fit_transform(df[col])
+
     df = df.dropna().reset_index(drop=True)
 
     log('info', 'categorical data transformed')
@@ -520,7 +525,7 @@ async def predict(background_tasks: BackgroundTasks,
     #                 )
     #log('info', 'Data scaled')
 
-    x = prepare_predict_data(df)
+    x = prepare_predict_data(df, model_name)
 
     if model_name not in models:
         log('error', 'Model {} not loaded', model_name)
