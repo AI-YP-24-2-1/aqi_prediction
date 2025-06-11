@@ -20,7 +20,7 @@ import torch
 from flaml import AutoML
 import uvicorn
 from api.models import ApiResponse, ModelListResponse, CompareModelsResponse, ApiDataResponse
-from constants import MODELS_SOURCE_DIR
+from constants import MODELS_SOURCE_DIR, INFERENCE_SOURCE_DIR
 from torch import nn
 from neural_network import NeuralNet
 
@@ -104,9 +104,13 @@ def prepare_predict_data(df):
     log('info', 'np.nan filled')
 
     log('info', 'transforming categorical data')
+    label_encoders = joblib.load(f'{INFERENCE_SOURCE_DIR}dl_model_encoder.pkl')
+
     for col in df.select_dtypes(include=['object']).columns:
-        le = LabelEncoder()
-        df[col] = le.fit_transform(df[col])
+        if col in label_encoders:
+            df[col] = label_encoders[col].transform(df[col])
+        else:
+            df = df.drop(columns=[col])
     
     df = df.dropna().reset_index(drop=True)
 
@@ -215,10 +219,12 @@ async def load(model_name: str = Form(...)):
             if model_name[model_name.rfind('.')+1:] == 'pth':
                 model = NeuralNet(23, 2048)
                 model.load_state_dict(torch.load(f'{MODELS_SOURCE_DIR}{model_name}', map_location=torch.device('cpu')))
+                scaler = joblib.load(f'{INFERENCE_SOURCE_DIR}dl_model_scaler.pkl')
             else:
                 model = joblib.load(f'{MODELS_SOURCE_DIR}{model_name}')
+                scaler = StandardScaler()
 
-            models[model_name] = {'scaler': StandardScaler(),
+            models[model_name] = {'scaler': scaler,
                                   'regressor': model
                                   }
             log('info', 'Model {} loaded', model_name)
@@ -537,7 +543,9 @@ async def predict(background_tasks: BackgroundTasks,
             pred = model.predict(x)
         elif extention == 'pth':
             x = x.values.astype(np.float32)
-            x_tensor = torch.from_numpy(x)
+            scaler = models[model_name]['scaler']
+            x_scaled = scaler.transform(x)
+            x_tensor = torch.from_numpy(x_scaled)
 
             model.eval()
 

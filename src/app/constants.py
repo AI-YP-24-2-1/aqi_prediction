@@ -1,1 +1,2 @@
 MODELS_SOURCE_DIR = 'models/'
+INFERENCE_SOURCE_DIR = 'inference/'
