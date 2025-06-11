@@ -21,7 +21,6 @@ from flaml import AutoML
 import uvicorn
 from api.models import ApiResponse, ModelListResponse, CompareModelsResponse, ApiDataResponse
 from constants import MODELS_SOURCE_DIR, INFERENCE_SOURCE_DIR
-from torch import nn
 from neural_network import NeuralNet
 
 
@@ -184,31 +183,6 @@ def log(level: str, message: str, *args) -> None:
         logging.warning(message.format(*args))
 
 setup_logging()
-
-
-#@app.get("/load_main", response_model=ApiResponse)
-#async def load_main():
-#    '''
-#    Loading main model
-#    '''
-#
-#    model_name = 'aqi_model'
-#
-#    if model_name not in models:
-#        try:
-#            log('info', 'Loading main model')
-#            model_pickle = joblib.load(f'{MODELS_SOURCE_DIR}{model_name}.pickle')
-#            models[model_name] = {'scaler': StandardScaler(),
-#                                  'regressor': model_pickle
-#                                  }
-#            log('info', 'Main model loaded')
-#        except Exception:
-#            log('error', 'Model not found')
-#            raise HTTPException(status_code=HTTPStatus.NOT_FOUND,
-#                                detail="Модель не найдена"
-#                                )
-#
-#    return ApiResponse(message=f"Model {model_name} loaded", success=True)
 
 
 @app.post("/load", response_model=ApiResponse)
@@ -507,23 +481,6 @@ async def predict(background_tasks: BackgroundTasks,
     contents = await file.read()
     df = pd.read_csv(StringIO(contents.decode('utf-8')))
     log('info', 'File read')
-
-    #log('info', 'Selecting numeric columns')
-    #df = pd.read_csv(StringIO(contents.decode('utf-8')))
-    #x = pd.DataFrame(df).select_dtypes(['float', 'int'])
-    #log('info', 'Numeric columns selected')
-
-    #log('info', 'Filling np.nan')
-    #for column in x.columns:
-    #    median_value = x[column].median() if not x[column].isna().all() else 0
-    #    x[column] = x[column].fillna(median_value)
-    #log('info', 'np.nan filled')
-
-    #log('info', 'Scaling data')
-    #x = pd.DataFrame(models[model_name]['scaler'].fit_transform(x),
-    #                 columns=x.columns
-    #                 )
-    #log('info', 'Data scaled')
 
     x = prepare_predict_data(df, model_name)
 
