@@ -1,0 +1,62 @@
+2025-06-11 21:40:19,234 - INFO - Showing not loaded models
+2025-06-11 21:40:25,806 - INFO - Showing not loaded models
+2025-06-11 21:40:25,910 - INFO - Showing not loaded models
+2025-06-11 21:40:27,098 - INFO - Showing not loaded models
+2025-06-11 21:40:27,189 - INFO - Showing loaded models
+2025-06-11 21:40:29,349 - INFO - Showing not loaded models
+2025-06-11 21:40:42,792 - INFO - Showing not loaded models
+2025-06-11 21:40:42,946 - INFO - Loading DL_model.pth model
+2025-06-11 21:40:45,512 - INFO - Model DL_model.pth loaded
+2025-06-11 21:40:56,290 - INFO - Showing not loaded models
+2025-06-11 21:40:57,171 - INFO - Showing not loaded models
+2025-06-11 21:40:57,245 - INFO - Loading FLAML_model.pkl model
+2025-06-11 21:40:57,622 - INFO - Model FLAML_model.pkl loaded
+2025-06-11 21:40:59,730 - INFO - Showing not loaded models
+2025-06-11 21:41:00,358 - INFO - Showing not loaded models
+2025-06-11 21:41:00,434 - INFO - Loading SGD_model.pkl model
+2025-06-11 21:41:00,440 - INFO - Model SGD_model.pkl loaded
+2025-06-11 21:41:09,080 - INFO - Showing not loaded models
+2025-06-11 21:41:19,371 - INFO - Showing loaded models
+2025-06-11 21:41:24,262 - INFO - Showing not loaded models
+2025-06-11 21:41:33,484 - INFO - Showing loaded models
+2025-06-11 21:41:34,686 - INFO - Reading file
+2025-06-11 21:41:36,788 - INFO - File read
+2025-06-11 21:41:36,789 - INFO - filling np.nan
+2025-06-11 21:41:37,059 - INFO - np.nan filled
+2025-06-11 21:41:37,059 - INFO - transforming categorical data
+2025-06-11 21:41:37,291 - INFO - categorical data transformed
+2025-06-11 21:41:37,292 - INFO - Predicting AQI with DL_model.pth model
+2025-06-11 21:42:12,460 - INFO - AQI predicted
+2025-06-11 21:42:12,588 - INFO - Saving prediction
+2025-06-11 21:42:17,762 - INFO - Prediction saved
+2025-06-11 21:42:20,968 - INFO - Showing not loaded models
+2025-06-11 21:42:29,720 - INFO - Showing loaded models
+2025-06-11 21:42:49,039 - INFO - Showing not loaded models
+2025-06-11 21:42:56,354 - INFO - Showing loaded models
+2025-06-11 21:43:06,316 - INFO - Reading file
+2025-06-11 21:43:07,244 - INFO - File read
+2025-06-11 21:43:07,245 - INFO - filling np.nan
+2025-06-11 21:43:07,402 - INFO - np.nan filled
+2025-06-11 21:43:07,403 - INFO - transforming categorical data
+2025-06-11 21:43:07,479 - INFO - categorical data transformed
+2025-06-11 21:43:07,480 - INFO - Predicting AQI with DL_model.pth model
+2025-06-11 21:43:31,185 - INFO - AQI predicted
+2025-06-11 21:43:31,203 - INFO - Saving prediction
+2025-06-11 21:43:35,338 - INFO - Prediction saved
+2025-06-11 21:43:41,209 - INFO - Showing not loaded models
+2025-06-11 21:43:54,995 - INFO - Showing loaded models
+2025-06-11 21:43:58,350 - INFO - Showing not loaded models
+2025-06-11 21:43:59,474 - INFO - Showing not loaded models
+2025-06-11 21:44:13,749 - INFO - Showing loaded models
+2025-06-11 21:44:14,015 - INFO - Reading file
+2025-06-11 21:44:14,975 - INFO - File read
+2025-06-11 21:44:14,975 - INFO - filling np.nan
+2025-06-11 21:44:15,129 - INFO - np.nan filled
+2025-06-11 21:44:15,130 - INFO - transforming categorical data
+2025-06-11 21:44:15,216 - INFO - categorical data transformed
+2025-06-11 21:44:15,216 - INFO - Predicting AQI with FLAML_model.pkl model
+2025-06-11 21:44:15,454 - INFO - AQI predicted
+2025-06-11 21:44:15,474 - INFO - Saving prediction
+2025-06-11 21:44:20,107 - INFO - Prediction saved
+2025-06-11 21:44:22,218 - INFO - Showing not loaded models
+2025-06-11 21:44:31,981 - INFO - Showing loaded models
