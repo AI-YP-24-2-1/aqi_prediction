@@ -53,31 +53,34 @@ Streamlit сервис будет доступен по url: http://localhost:85
 ## Возможности Streamlit
 1. Streamlit предоставляет возможность загрузить csv файл с данными для обучения модели
 Для этого в меню слева загружаем csv файл (тестовый файл можно взять в директории fast_api_dataset/dataset.csv)<br>
-![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/load_train_data.png?raw=true)
+![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/2.load_train_data.png?raw=true)
 
-На этом этапе у нас есть 4 раздела:
+На этом этапе у нас есть 5 разделов:
 * Загрузка и удаление моделей - мы можем посмотреть загруженные и незагруженные модели, можем загрузить выбранную модель или удалить все модели
-![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/loading_deleting_models.png?raw=true)<br>
+![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/3.loading_deleting_models.png?raw=true)<br>
 
 * Анализ загруженных данных для обучения - в этом разделе отображается информация о загруженном датасете (размер датасета, информация о показателях, корреляционная матрица и графики по показателям)
-![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/train_data_analysis.png?raw=true)<br>
+![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/4.train_data_analysis.png?raw=true)<br>
 
-* Обучение моделей - в этом разделе необходимо указать название модели и начать ее обучение. После обучения модель будет отображаться в списке загруженных моделей в разделе "Загрузка и удаление моделей"
-![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/train_model.png?raw=true)<br>
+* Обучение SGD модели - в этом разделе обучаем SGD модель. Необходимо указать название модели, указать гиперпараметры и начать ее обучение. После обучения модель будет отображаться в списке загруженных моделей в разделе "Загрузка и удаление моделей"
+![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/5.train_sgd_model.png?raw=true)<br>
+
+* Обучение Flaml AutoML модели - в этом разделе обучаем Flaml AutoML модель. Необходимо указать название модели, указать время обучения и начать ее обучение. После обучения модель будет отображаться в списке загруженных моделей в разделе "Загрузка и удаление моделей"
+![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/6.train_flaml_automl_model.png?raw=true)<br>
 
 * Сравнение моделей - В этом разделе необходимо выбрать две загруженные модели. Для них будет отображены гиперпараметры, метрики качества и коэффициенты модели, а также кривые обучения
-![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/compare_models.png?raw=true)
+![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/7.compare_models.png?raw=true)<br>
 
 2. Есть возможность загрузить csv файл с данными для прогнозирования AQI
 Для этого в меню слева загружаем csv файл (тестовый файл можно взять в директории fast_api_dataset/dataset_predict.csv)<br>
-![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/load_prediction_data.png?raw=true)
+![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/8.load_prediction_data.png?raw=true)<br>
 
 На этом этапе у нас появляется 2 новых раздела:
 * Анализ загруженных данных для прогноза - в этом разделе отображается информация о загруженном датасете (размер датасета, информация о показателях, корреляционная матрица и графики по показателям)
-![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/forecast_data_analysis.png?raw=true)<br>
+![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/9.forecast_data_analysis.png?raw=true)<br>
 
 * Построение прогноза - мы можем выбрать модель из списка загруженных моделей и сделать прогноз. После построения прогноза можно будет загрузить csv файл с прогнозными значениями AQI
-![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/model_forecast.png?raw=true)
+![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/10.model_forecast.png?raw=true)<br>
 
 ## Демонстрация работы Streamlit
 ![alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/Streamlit_video.gif?raw=true)
@@ -87,14 +90,14 @@ Streamlit сервис будет доступен по url: http://localhost:85
 Fastapi доступен по url: http://0.0.0.0:8000/
 
 Методы Fastapi:<br>
-* POST /fit - обучение модели 
-* GET /load_main - загружает базовую модель
 * POST /load - загружает выбранную модель
-* POST /predict - строит прогноз AQI
 * GET /list_models - отображает список загруженных моделей
-* GET /list_models_for_comparison - загружает обученные модели для которых есть кривые обучения
 * GET /list_models_not_loaded - отображает список незагруженных моделей
 * DELETE /remove_all - удаляет все модели
+* POST /fit_sgd - обучение sgd модели
+* POST /fit_flaml - обучение flaml модели
+* POST /predict - строит прогноз AQI
+* GET /list_models_for_comparison - загружает обученные модели для которых есть кривые обучения
 * POST /compare_models - отображает данные модели для сравнения
 
 # Команда проекта
