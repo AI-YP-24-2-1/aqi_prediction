@@ -84,6 +84,7 @@ with st.expander('Загрузка и удаление моделей'):
                                    )
 
     col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
         if st.button('Список загруженных моделей'):
@@ -118,17 +119,17 @@ with st.expander('Загрузка и удаление моделей'):
             else:
                 st.write(response.json()['detail'])
 
-    with col4:
-        if st.button('Загрузить базовую модель'):
-            response = httpx.get("http://0.0.0.0:8000/load_main",
-                                 timeout=1000000
-                                 )
-            if response.status_code == 200:
-                st.write(response.json()['message'])
-            else:
-                st.write(response.json()['detail'])
+    #with col4:
+    #    if st.button('Загрузить базовую модель'):
+    #        response = httpx.get("http://0.0.0.0:8000/load_main",
+    #                             timeout=1000000
+    #                             )
+    #        if response.status_code == 200:
+    #            st.write(response.json()['message'])
+    #        else:
+    #            st.write(response.json()['detail'])
 
-    with col5:
+    with col4:
         if st.button('Удалить все модели'):
             response = httpx.delete("http://0.0.0.0:8000/remove_all",
                                     timeout=1000000
@@ -180,8 +181,8 @@ if file_train is not None:
         plots(df_train, indicator_train, region_train)
         boxplot(df_train, indicator_train, region_train)
 
-    with st.expander('Обучение моделей'):
-        model_name = st.text_input('Введите название модели:', key='fit')
+    with st.expander('Обучение SGD модели'):
+        model_name = st.text_input('Введите название модели:', key='fit SGD')
 
         st.write('Укажите гиперпараметры модели. Если поле будет пустым,'
                  'то значение будет выбрано по умолчанию')
@@ -204,7 +205,7 @@ if file_train is not None:
         tol = tol if tol != '' else -1
         eta0 = eta0 if eta0 != '' else -1
 
-        button1 = st.button('Начать обучение')
+        button1 = st.button('Начать обучение', key = 'train_sgd')
 
         data = {'model_name': model_name,
                 'alpha': alpha,
@@ -215,7 +216,7 @@ if file_train is not None:
                 }
 
         if button1:
-            response = httpx.post("http://0.0.0.0:8000/fit",
+            response = httpx.post("http://0.0.0.0:8000/fit_sgd",
                                   files={'file': csv_file_train},
                                   data=data,
                                   timeout=1000000
@@ -264,6 +265,52 @@ if file_train is not None:
             else:
                 st.write(response.json()['detail'])
     
+    with st.expander('Обучение flaml AutoML модели'):
+        model_name = st.text_input('Введите название модели:', key='fit flaml')
+
+        st.write('Укажите гиперпараметры модели. Если поле будет пустым,'
+                 'то значение будет выбрано по умолчанию')
+
+        time_budget = st.text_input('Введите time_budget:', key='time_budget')
+        time_budget = time_budget if time_budget != '' else -1
+
+        button1 = st.button('Начать обучение', key='train_flaml')
+
+        data = {'model_name': model_name,
+                'time_budget': time_budget
+                }
+
+        if button1:
+            response = httpx.post("http://0.0.0.0:8000/fit_flaml",
+                                  files={'file': csv_file_train},
+                                  data=data,
+                                  timeout=1000000
+                                  )
+
+            if response.status_code == 201:
+                st.write(response.json()['message'])
+                data = response.json()['data']
+
+                params_col, metrics_col = st.columns(2)
+
+                with params_col:
+                    st.write('Гиперпараметры модели:')
+                    params = pd.DataFrame({'time_budget': [data['time_budget']]}).T
+                    params = params.rename(columns={0: 'value'})
+                    st.write(params)
+
+                with metrics_col:
+                    st.write('Качество модели:')
+                    metrics = pd.DataFrame({'r2': [data['r2']],
+                                            'MSE': [data['MSE']],
+                                            'RMSE': [data['RMSE']]}
+                                            ).T
+                    metrics = metrics.rename(columns={0: 'value'})
+                    st.write(metrics)
+
+            else:
+                st.write(response.json()['detail'])
+    
     with st.expander('Сравнение моделей'):
         response = httpx.get("http://0.0.0.0:8000/list_models_for_comparison",
                             timeout=1000000
@@ -298,79 +345,115 @@ if file_train is not None:
             models_data_2 = response_2.json()
 
         if models_data_1 and models_data_2:
+            model_type_1 = model_name_1[:model_name_1.find('_')]
+            model_type_2 = model_name_2[:model_name_2.find('_')]
+
             if model_name_1 == model_name_2:
                 st.write('Модели должны быть разными')
+            elif model_type_1 != model_type_2:
+                st.write('Модели должны быть одного типа')
             else:
-                params_comparison, metrics_comparison, coef_comparison = st.columns(3)
+                if model_type_1 == 'SGD':
+                    params_comparison, metrics_comparison, coef_comparison = st.columns(3)
 
-                with params_comparison:
-                    st.write('Гиперпараметры моделей:')
-                    params = pd.DataFrame({'alpha': [models_data_1['models_data']['alpha'],
-                                                    models_data_2['models_data']['alpha']
+                    with params_comparison:
+                        st.write('Гиперпараметры моделей:')
+                        params = pd.DataFrame({'alpha': [models_data_1['models_data']['alpha'],
+                                                        models_data_2['models_data']['alpha']
+                                                        ],
+                                            'l1_ratio': [models_data_1['models_data']['l1_ratio'],
+                                                        models_data_2['models_data']['l1_ratio']
+                                                        ],
+                                            'max_iter': [models_data_1['models_data']['max_iter'],
+                                                        models_data_2['models_data']['max_iter']
+                                                        ],
+                                            'tol': [models_data_1['models_data']['tol'],
+                                                    models_data_2['models_data']['tol']
                                                     ],
-                                        'l1_ratio': [models_data_1['models_data']['l1_ratio'],
-                                                    models_data_2['models_data']['l1_ratio']
-                                                    ],
-                                        'max_iter': [models_data_1['models_data']['max_iter'],
-                                                    models_data_2['models_data']['max_iter']
-                                                    ],
-                                        'tol': [models_data_1['models_data']['tol'],
-                                                models_data_2['models_data']['tol']
-                                                ],
-                                        'eta0': [models_data_1['models_data']['eta0'],
-                                                models_data_2['models_data']['eta0']
-                                                ]
-                                                }
-                                        ).T
-                    params = params.rename(columns={0: model_name_1, 1: model_name_2})
-                    st.write(params)
-                
-                with metrics_comparison:
-                    st.write('Качество моделей:')
-                    metrics = pd.DataFrame({'r2': [models_data_1['models_data']['r2'],
-                                                models_data_2['models_data']['r2']
-                                                ],
-                                            'MSE': [models_data_1['models_data']['MSE'],
-                                                    models_data_2['models_data']['MSE']
-                                                    ],
-                                            'RMSE': [models_data_1['models_data']['RMSE'],
-                                                    models_data_2['models_data']['RMSE']
+                                            'eta0': [models_data_1['models_data']['eta0'],
+                                                    models_data_2['models_data']['eta0']
                                                     ]
                                                     }
                                             ).T
-                    metrics = metrics.rename(columns={0: model_name_1, 1: model_name_2})
-                    st.write(metrics)
+                        params = params.rename(columns={0: model_name_1, 1: model_name_2})
+                        st.write(params)
+                    
+                    with metrics_comparison:
+                        st.write('Качество моделей:')
+                        metrics = pd.DataFrame({'r2': [models_data_1['models_data']['r2'],
+                                                    models_data_2['models_data']['r2']
+                                                    ],
+                                                'MSE': [models_data_1['models_data']['MSE'],
+                                                        models_data_2['models_data']['MSE']
+                                                        ],
+                                                'RMSE': [models_data_1['models_data']['RMSE'],
+                                                        models_data_2['models_data']['RMSE']
+                                                        ]
+                                                        }
+                                                ).T
+                        metrics = metrics.rename(columns={0: model_name_1, 1: model_name_2})
+                        st.write(metrics)
 
-                    with coef_comparison:
-                        st.write('Коэффициенты моделей:')
-                        coef = pd.DataFrame([models_data_1['models_data']['coef'],
-                                            models_data_2['models_data']['coef']
-                                            ]
-                                            ).T
-                        coef = coef.rename(columns={0: model_name_1, 1: model_name_2})
-                        st.write(coef)
+                        with coef_comparison:
+                            st.write('Коэффициенты моделей:')
+                            coef = pd.DataFrame([models_data_1['models_data']['coef'],
+                                                models_data_2['models_data']['coef']
+                                                ]
+                                                ).T
+                            coef = coef.rename(columns={0: model_name_1, 1: model_name_2})
+                            st.write(coef)
+                    
+                    st.write('Кривая обучения:')
+                    loss_list_1 = models_data_1['models_data']['loss_list']
+                    loss_list_2 = models_data_2['models_data']['loss_list']
+                    fig = go.Figure()
+
+                    fig.add_trace(go.Scatter(x=np.arange(len(loss_list_1)), y=loss_list_1,
+                                            mode='lines+markers', name=model_name_1,
+                                            line=dict(color='blue')))
+
+                    fig.add_trace(go.Scatter(x=np.arange(len(loss_list_2)), y=loss_list_2,
+                                            mode='lines+markers', name=model_name_2,
+                                            line=dict(color='red')))
+
+
+                    fig.update_layout(title="Model Loss Over Epochs",
+                                    xaxis_title="Epochs",
+                                    yaxis_title="Loss",
+                                    xaxis=dict(showgrid=True),
+                                    yaxis=dict(showgrid=True))  
+
+                    st.plotly_chart(fig)
                 
-                st.write('Кривая обучения:')
-                loss_list_1 = models_data_1['models_data']['loss_list']
-                loss_list_2 = models_data_2['models_data']['loss_list']
-                fig = go.Figure()
+                elif model_type_1 == 'FLAML':
+                    params_comparison, metrics_comparison = st.columns(2)
 
-                fig.add_trace(go.Scatter(x=np.arange(len(loss_list_1)), y=loss_list_1,
-                                        mode='lines+markers', name=model_name_1,
-                                        line=dict(color='blue')))
+                    with params_comparison:
+                        st.write('Гиперпараметры моделей:')
+                        params = pd.DataFrame({'alpha': [models_data_1['models_data']['time_budget'],
+                                                        models_data_2['models_data']['time_budget']
+                                                        ]
+                                                    }
+                                            ).T
+                        params = params.rename(columns={0: model_name_1, 1: model_name_2})
+                        st.write(params)
+                    
+                    with metrics_comparison:
+                        st.write('Качество моделей:')
+                        metrics = pd.DataFrame({'r2': [models_data_1['models_data']['r2'],
+                                                    models_data_2['models_data']['r2']
+                                                    ],
+                                                'MSE': [models_data_1['models_data']['MSE'],
+                                                        models_data_2['models_data']['MSE']
+                                                        ],
+                                                'RMSE': [models_data_1['models_data']['RMSE'],
+                                                        models_data_2['models_data']['RMSE']
+                                                        ]
+                                                        }
+                                                ).T
+                        metrics = metrics.rename(columns={0: model_name_1, 1: model_name_2})
+                        st.write(metrics)
 
-                fig.add_trace(go.Scatter(x=np.arange(len(loss_list_2)), y=loss_list_2,
-                                        mode='lines+markers', name=model_name_2,
-                                        line=dict(color='red')))
-
-
-                fig.update_layout(title="Model Loss Over Epochs",
-                                xaxis_title="Epochs",
-                                yaxis_title="Loss",
-                                xaxis=dict(showgrid=True),
-                                yaxis=dict(showgrid=True))  
-
-                st.plotly_chart(fig)
 
 if file_predict is not None:
     df_predict = pd.read_csv(file_predict)
@@ -421,21 +504,26 @@ if file_predict is not None:
         model_list = response.json()['models']
         select_model = st.selectbox('Выберите модель:', model_list)
 
-        button6 = st.button('Прогноз на выбранной модели')
+        if model_list:
+            #select_model = select_model.replace('.pkl', '') if '.pkl' in select_model else select_model
 
-        if button6:
-            response = httpx.post("http://0.0.0.0:8000/predict",
-                                  files={'file': csv_file_predict},
-                                  data={'model_name': select_model},
-                                  timeout=1000000
-                                  )
-            if response.status_code == 200:
-                st.write('Прогноз построен')
-                st.download_button(label='Скачать прогноз',
-                                   data=response.content,
-                                   file_name=f'european_aqi_forecast_'
-                                   f'{select_model}.csv',
-                                   mime='text/csv'
-                                   )
-            else:
-                st.write(response.json())
+            button6 = st.button('Прогноз на выбранной модели')
+
+            if button6:
+                response = httpx.post("http://0.0.0.0:8000/predict",
+                                    files={'file': csv_file_predict},
+                                    data={'model_name': select_model},
+                                    timeout=1000000
+                                    )
+                if response.status_code == 200:
+                    st.write('Прогноз построен')
+                    st.download_button(label='Скачать прогноз',
+                                    data=response.content,
+                                    file_name=f'european_aqi_forecast_'
+                                    f'{select_model}.csv',
+                                    mime='text/csv'
+                                    )
+                else:
+                    st.write(response.json())
+        else:
+            st.write('Отсутствуют загруженные модели')
