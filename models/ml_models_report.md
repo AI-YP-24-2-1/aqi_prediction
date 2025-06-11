@@ -39,7 +39,7 @@
 * CatBoost
 * Flaml AutoML
 
-![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/models_results.png?raw=true)
+![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/12.models_results.png?raw=true)
 
 Наилучшее качество показывает модель CatBoost<br>
 * MSE = 8.77
@@ -55,7 +55,7 @@
 
 Для проверки эффекта обучим Decision Tree и CatBoost с лучшими гиперпараметрами и сравним результаты
 
-![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/models_results_size.png?raw=true)
+![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/13.models_results_size.png?raw=true)
 
 Видим, что MSE и $R^2$ стали хуже при снижении размерности с помощью PCA и Isolation Forest<br>
 

@@ -85,4 +85,4 @@
 
 Получаем MSE = 1.559
 
-![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/all_models.png?raw=true)
+![Alt text](https://github.com/AI-YP-24-2-1/aqi_prediction/blob/main/images/11.all_models.png?raw=true)
